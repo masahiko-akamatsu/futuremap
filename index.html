@@ -1,14 +1,1498 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>フューチャーマップ 🌸</title>
-    <meta name="description" content="毎月の目標を管理して愛し愛される人生を実現する" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>" />
-    <script type="module" crossorigin src="/futuremap/assets/index-DusY5cx4.js"></script>
-  </head>
-  <body style="margin:0;background:#fdf8f2">
-    <div id="root"></div>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#fff8f9">
+<title>予祝ひろば 🌸</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@700;800&family=Noto+Serif+JP:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-text-size-adjust:100%}
+body{background:linear-gradient(150deg,#fff8f9 0%,#fffbf4 45%,#f8f4ff 100%);font-family:'Hiragino Mincho ProN','Yu Mincho',Georgia,serif;min-height:100vh;overflow-x:hidden}
+#root{min-height:100vh}
+@keyframes petalFall{0%{transform:translateY(-60px) rotate(0deg)}100%{transform:translateY(110vh) rotate(400deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+@keyframes shimmer{0%,100%{opacity:.75}50%{opacity:1}}
+.card{transition:transform .22s ease,box-shadow .22s ease;cursor:pointer}
+.card:hover{transform:translateY(-4px);box-shadow:0 16px 48px rgba(200,90,140,.16)!important}
+.btn-p{background:linear-gradient(135deg,#e8728a,#c85a8e);color:#fff;border:none;border-radius:50px;font-family:'Noto Serif JP',serif;cursor:pointer;transition:all .2s;box-shadow:0 6px 22px rgba(200,90,142,.35);letter-spacing:.05em;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn-p:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 30px rgba(200,90,142,.48)}
+.btn-p:disabled{opacity:.55;cursor:default;transform:none}
+.btn-s{background:#fff;color:#c85a8e;border:2px solid #e8b4c4;border-radius:50px;font-family:'Noto Serif JP',serif;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-s:hover{background:#fff5f8}
+.btn-d{background:#fff;color:#e07070;border:2px solid #f0b4b4;border-radius:50px;font-family:'Noto Serif JP',serif;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-d:hover{background:#fff5f5}
+.chip{border-radius:50px;font-family:'Noto Serif JP',serif;cursor:pointer;transition:all .2s;letter-spacing:.03em;white-space:nowrap;border:none}
+.chip-on{background:linear-gradient(135deg,#e8728a,#c85a8e);color:#fff;box-shadow:0 4px 14px rgba(200,90,142,.3)}
+.chip-off{background:#fff;color:#9a5070;border:1.5px solid #e8b4c4}
+.chip-off:hover{background:#fff5f8}
+.inp{width:100%;padding:13px 16px;border-radius:13px;outline:none;background:#fdf4f7;font-size:15px;color:#3a1520;font-family:'Noto Serif JP',serif;transition:border .15s}
+.inp:focus{border-color:#e8728a!important}
+.inp-ok{border:1.5px solid #e8b4c4}
+.inp-err{border:2px solid #e8728a}
+.nav-it{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 8px;border-radius:12px;transition:all .18s;flex:1}
+.nav-it:hover{background:rgba(232,180,196,.14)}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.modal-bg{position:fixed;inset:0;zIndex:300;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:#e8b4c4;border-radius:3px}
+input,textarea,select{font-family:'Noto Serif JP',serif;font-size:15px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/* ══ Firebase初期化（Babelの外で実行）══ */
+(function(){
+  var config={
+    apiKey:"AIzaSyC64BmjAX5V8ZGnU-kLOQpRzrS98RoRE-8",
+    authDomain:"yosyukupro.firebaseapp.com",
+    databaseURL:"https://yosyukupro-default-rtdb.firebaseio.com",
+    projectId:"yosyukupro",
+    storageBucket:"yosyukupro.firebasestorage.app",
+    messagingSenderId:"824661488718",
+    appId:"1:824661488718:web:f4951ee0e7c99b2e7a3f1f"
+  };
+  try{
+    if(!firebase.apps.length){firebase.initializeApp(config);}
+    window._fbDb=firebase.database();
+    window._fbReady=true;
+    console.log("Firebase接続成功 ✅");
+  }catch(e){
+    window._fbDb=null;
+    window._fbReady=false;
+    console.error("Firebase接続失敗:",e);
+  }
+})();
+</script>
+<script type="text/babel">
+const{useState,useEffect,useRef}=React;
+
+/* ══ Firebase（外部scriptタグで初期化済み） ══ */
+// window._fbDb が未定義の場合は再度初期化を試みる
+let db=window._fbDb||null;
+let firebaseReady=window._fbReady||false;
+if(!firebaseReady&&typeof firebase!=="undefined"){
+  try{
+    if(!firebase.apps.length){
+      firebase.initializeApp({
+        apiKey:"AIzaSyC64BmjAX5V8ZGnU-kLOQpRzrS98RoRE-8",
+        authDomain:"yosyukupro.firebaseapp.com",
+        databaseURL:"https://yosyukupro-default-rtdb.firebaseio.com",
+        projectId:"yosyukupro",
+        storageBucket:"yosyukupro.firebasestorage.app",
+        messagingSenderId:"824661488718",
+        appId:"1:824661488718:web:f4951ee0e7c99b2e7a3f1f"
+      });
+    }
+    db=firebase.database();
+    firebaseReady=true;
+    console.log("Firebase再初期化成功 ✅");
+  }catch(e){
+    console.error("Firebase再初期化失敗:",e);
+  }
+}
+
+/* ══ 定数 ══ */
+const KEY_USER="yosyuku_v4_user",KEY_LIKED="yosyuku_v4_liked",KEY_BM="yosyuku_v4_bm";
+const DEFAULT_ADMIN_PASSWORD="yosyuku2026"; /* 初期パスワード */
+const DEFAULT_CATEGORIES=["仕事・キャリア","健康・美容","家族・人間関係","お金・豊かさ","夢・目標","自分磨き"];
+const FLOWERS=["🌸","🌺","🌹","🌷","💐","🌼","✨","🌟","💫","🎀","🍀","🦋"];
+/* ① フルーツアイコン追加（いちご含む） */
+const AVATARS=["🌸","🌺","🌼","🌻","🌹","💐","🌷","🍀","🌿","🦋","🌙","⭐","💫","🌟","✨","🎀","🍓","🍒","🍑","🍊","🍋","🍇","🍉","🍎","🥝","🫐","🍈","🌈"];
+const SEEDS=[
+  {id:"s1",author:"さくら",avatar:"🌸",category:"仕事・キャリア",flower:"🌸",message:"念願の独立を果たし、大好きなお菓子作りで多くの人を笑顔にできました！自分のペースで働けて、毎日がキラキラと輝いています✨",date:"2026-03-01",likes:0,bookmarks:0,ts:1000,likedBy:{}},
+  {id:"s2",author:"みどり",avatar:"🍀",category:"健康・美容",flower:"🍀",message:"マラソン完走しました🎉 10キロ痩せて、20代の頃より元気です。毎朝のジョギングが今では最高の喜びになっています！",date:"2026-03-05",likes:0,bookmarks:0,ts:2000,likedBy:{}},
+  {id:"s3",author:"はな",avatar:"🌹",category:"夢・目標",flower:"🌹",message:"フランス語が話せるようになってパリに一人旅に行けました！カフェで地元の人と会話できた瞬間、涙が出るほど嬉しかったです🗼",date:"2026-03-10",likes:0,bookmarks:0,ts:3000,likedBy:{}},
+];
+
+const lsGet=(k,fb=null)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb;}catch{return fb;}};
+const lsSet=(k,v)=>{
+  try{
+    localStorage.setItem(k,JSON.stringify(v));
+    return true;
+  }catch(e){
+    console.error("localStorage保存失敗:",k,e);
+    return false;
+  }
+};
+function fmtDate(iso){
+  const d=new Date(iso);
+  if(isNaN(d))return iso;
+  // 日本時間(JST=UTC+9)で表示
+  const jst=new Date(d.getTime()+9*60*60*1000);
+  const Y=jst.getUTCFullYear();
+  const M=jst.getUTCMonth()+1;
+  const D=jst.getUTCDate();
+  const h=jst.getUTCHours();
+  const m=String(jst.getUTCMinutes()).padStart(2,'0');
+  // 時分がある場合（tsから生成）は時間も表示
+  if(iso.length>10){return `${Y}年${M}月${D}日 ${h}:${m}`;}
+  return `${Y}年${M}月${D}日`;
+}
+function genId(){return`p_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;}
+
+/* ══ 花びら ══ */
+const PETALS=Array.from({length:12},(_,i)=>({id:i,x:Math.round(Math.random()*100),sz:Math.round(10+Math.random()*14),op:parseFloat((0.1+Math.random()*0.16).toFixed(2)),dur:parseFloat((10+Math.random()*14).toFixed(1)),dl:parseFloat((Math.random()*10).toFixed(1)),e:FLOWERS[Math.floor(Math.random()*4)]}));
+function Petals(){return React.createElement(React.Fragment,null,PETALS.map(p=>React.createElement('div',{key:p.id,style:{position:'fixed',fontSize:p.sz,left:`${p.x}%`,top:-60,opacity:p.op,pointerEvents:'none',zIndex:0,animation:`petalFall ${p.dur}s linear ${p.dl}s infinite`}},p.e)));}
+
+/* ══ アバター表示（画像 or 絵文字） ══ */
+function Avatar({src,emoji,size=38}){
+  return src
+    ?<img src={src} style={{width:size,height:size,borderRadius:'50%',objectFit:'cover',flexShrink:0}} onError={e=>{e.target.style.display='none';}}/>
+    :<div style={{width:size,height:size,borderRadius:'50%',flexShrink:0,background:'linear-gradient(135deg,#fce4ec,#f8bbd9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:size*0.46}}>{emoji||'🌸'}</div>;
+}
+
+/* ══ モーダル背景 ══ */
+function ModalBg({onClose,children}){
+  return<div onClick={onClose} style={{position:'fixed',inset:0,zIndex:300,background:'rgba(0,0,0,.45)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
+    <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:24,padding:'28px 22px',width:'100%',maxWidth:500,boxShadow:'0 16px 60px rgba(0,0,0,.2)',maxHeight:'90vh',overflowY:'auto'}}>
+      {children}
+    </div>
+  </div>;
+}
+
+/* ══ カード ══ */
+function PostCard({post:p,liked,bookmarked,index,onOpen,onLike,onBookmark,onEdit,onDelete,onShowLikers,onComment,isOwner}){
+  return<div className="card" onClick={onOpen} style={{background:'#fff',borderRadius:20,padding:'20px 20px 16px',boxShadow:'0 4px 22px rgba(200,100,140,.09)',border:'1px solid rgba(232,180,196,.28)',animation:`slideUp .4s ease ${Math.min(index,.8)*0.06}s both`,position:'relative',overflow:'hidden'}}>
+    <div style={{position:'absolute',top:-14,right:-14,fontSize:72,opacity:.05,pointerEvents:'none'}}>{p.flower}</div>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:11}}>
+      <div style={{display:'flex',alignItems:'center',gap:9}}>
+        <Avatar src={p.avatarImg} emoji={p.avatar||p.flower} size={38}/>
+        <div>
+          <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:700,fontSize:15,color:'#6b1a3a'}}>{p.author}</div>
+          <div style={{fontSize:10,color:'#b08090',fontFamily:"'Noto Serif JP',serif"}}>{fmtDate(p.date)}</div>
+        </div>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:5}}>
+        {isOwner&&<>
+          <button onClick={e=>{e.stopPropagation();onEdit(p);}} style={{background:'transparent',border:'1.5px solid #e8b4c4',borderRadius:50,padding:'3px 9px',fontSize:11,cursor:'pointer',color:'#c06080'}}>✏️</button>
+          <button onClick={e=>{e.stopPropagation();onDelete(p);}} style={{background:'transparent',border:'1.5px solid #f0b4b4',borderRadius:50,padding:'3px 9px',fontSize:11,cursor:'pointer',color:'#e07070'}}>🗑️</button>
+        </>}
+        <span style={{display:'inline-block',background:'linear-gradient(135deg,#fce4ec,#f8bbd9)',color:'#ad4775',fontSize:11,padding:'3px 11px',borderRadius:20,fontFamily:"'Noto Serif JP',serif",whiteSpace:'nowrap'}}>{p.category}</span>
+      </div>
+    </div>
+    <p style={{fontSize:14,color:'#3a1520',lineHeight:1.85,margin:'0 0 8px',fontFamily:"'Noto Serif JP',serif",whiteSpace:'pre-wrap',wordBreak:'break-word'}}>
+      {p.message.length>95?p.message.slice(0,95)+'…':p.message}
+    </p>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+      {/* 💬 コメントボタン */}
+      <button onClick={e=>{e.stopPropagation();onComment(p);}} style={{
+        background:'transparent',border:'1.5px solid #e8d4f0',borderRadius:50,
+        padding:'5px 13px',fontSize:13,cursor:'pointer',
+        color:'#9060b0',display:'flex',alignItems:'center',gap:5,
+        fontFamily:"'Noto Serif JP',serif",transition:'all .2s'
+      }}>
+        💬 {p.replyCount>0?p.replyCount:'コメント'}
+      </button>
+      <div style={{display:'flex',gap:8,alignItems:'center'}}>
+        <button onClick={e=>{e.stopPropagation();onBookmark();}} style={{background:bookmarked?'#fce4ec':'transparent',border:'1.5px solid #e8b4c4',borderRadius:50,padding:'5px 12px',fontSize:13,cursor:'pointer',color:'#c05070',transition:'all .2s'}}>{bookmarked?'📌':'🔖'}</button>
+        {/* ハートで共感 */}
+        <button onClick={e=>{e.stopPropagation();onLike();}} style={{
+          background:liked?'linear-gradient(135deg,#e8728a,#c85a8e)':'transparent',
+          border:liked?'none':'1.5px solid #e8b4c4',
+          borderRadius:50,padding:'6px 16px',fontSize:14,cursor:'pointer',
+          color:liked?'#fff':'#c05070',
+          display:'flex',alignItems:'center',gap:5,
+          fontFamily:"'Noto Serif JP',serif",transition:'all .2s',
+          boxShadow:liked?'0 4px 14px rgba(200,90,142,.3)':'none'
+        }}>
+          {liked?'🩷':'🤍'} {p.likes}
+        </button>
+        {/* 共感した人を見るアイコン */}
+        <button onClick={e=>{e.stopPropagation();onShowLikers(p);}} style={{
+          background:'transparent',border:'none',
+          padding:'5px 4px',fontSize:14,cursor:'pointer',
+          color:'#d4a0b8',transition:'all .2s'
+        }} title="共感した人を見る">👥</button>
+      </div>
+    </div>
+  </div>;
+}
+
+function Field({label,error,children}){return<div style={{marginBottom:16}}><div style={{fontSize:13,color:'#8b4060',marginBottom:7,fontFamily:"'Noto Serif JP',serif",letterSpacing:'.05em'}}>{label}</div>{children}{error&&<div style={{color:'#e8728a',fontSize:12,marginTop:4,fontFamily:"'Noto Serif JP',serif"}}>{error}</div>}</div>;}
+function EmptyState({msg="まだメッセージがありません",sub="最初の予祝を書いてみませんか？",onWrite}){return<div style={{textAlign:'center',padding:'56px 20px'}}><div style={{fontSize:44,marginBottom:12}}>🌸</div><div style={{fontSize:15,fontFamily:"'Shippori Mincho',serif",fontWeight:700,color:'#6b1a3a',marginBottom:6}}>{msg}</div><div style={{fontSize:13,color:'#9a5070',fontFamily:"'Noto Serif JP',serif",marginBottom:onWrite?20:0}}>{sub}</div>{onWrite&&<button className="btn-p" onClick={onWrite} style={{padding:'11px 28px',fontSize:14}}>✨ 予祝を書く</button>}</div>;}
+
+/* ══════════════════════════════════════════
+   メインアプリ
+══════════════════════════════════════════ */
+function App(){
+  const[posts,setPosts]=useState([]);
+  const[loading,setLoading]=useState(true);
+  const[saving,setSaving]=useState(false);
+  const[view,setView]=useState("splash");
+  const[selected,setSelected]=useState(null);
+  const[filter,setFilter]=useState("すべて");
+  const[sort,setSort]=useState("new");
+  const[toast,setToast]=useState(null);
+  const[newBadge,setNewBadge]=useState(false);
+
+  /* ② ニックネームデフォルト設定：保存済みユーザー読み込み */
+  const[user,setUser]=useState(()=>lsGet(KEY_USER));
+  const[liked,setLiked]=useState(()=>new Set(lsGet(KEY_LIKED,[])));
+  const[bookmarks,setBookmarks]=useState(()=>new Set(lsGet(KEY_BM,[])));
+
+  /* カテゴリー（Firebase連動） */
+  const[categories,setCategories]=useState(DEFAULT_CATEGORIES);
+
+  /* 管理者 */
+  const[isAdmin,setIsAdmin]=useState(false);
+  const[adminPwInput,setAdminPwInput]=useState("");
+  const[adminPwError,setAdminPwError]=useState(false);
+  const[catInput,setCatInput]=useState("");
+  const[adminPassword,setAdminPassword]=useState(()=>lsGet("yosyuku_admin_pw")||DEFAULT_ADMIN_PASSWORD);
+  const[newPw,setNewPw]=useState("");
+  const[newPwConfirm,setNewPwConfirm]=useState("");
+  const[pwChangeError,setPwChangeError]=useState("");
+  const[pwChangeSuccess,setPwChangeSuccess]=useState(false);
+
+  const[form,setForm]=useState({author:"",category:categories[0]||DEFAULT_CATEGORIES[0],message:"",flower:"🌸"});
+  const[errors,setErrors]=useState({});
+  /* ② onboardのデフォルトnameを空→ユーザーが名前を入れやすく */
+  const[onboard,setOnboard]=useState({name:"",avatar:"🌸",avatarImg:""});
+
+  /* 編集・削除 */
+  const[editTarget,setEditTarget]=useState(null);
+  const[editForm,setEditForm]=useState({message:"",category:categories[0]||DEFAULT_CATEGORIES[0],flower:"🌸"});
+  const[deleteTarget,setDeleteTarget]=useState(null);
+
+  /* ⑤ 共感した人モーダル */
+  const[likersPost,setLikersPost]=useState(null);
+  const[likersData,setLikersData]=useState({});  // Firebaseから取得した最新likedBy
+
+  /* ⑤ 共感した人を表示（Firebaseから最新取得） */
+  const openLikers=async(post)=>{
+    setLikersPost(post);
+    setLikersData({}); // 一旦クリア
+    if(firebaseReady&&db){
+      const snap=await db.ref("posts/"+post.id+"/likedBy").get();
+      const val=snap.val();
+      // val は { safeName: rawName } の形式
+      setLikersData(val||{});
+    }else{
+      setLikersData(post.likedBy||{});
+    }
+  };
+
+  /* 返信モーダル */
+  const[replyTarget,setReplyTarget]=useState(null);
+  const[replies,setReplies]=useState([]);
+  const[replyText,setReplyText]=useState("");
+  const[replyImage,setReplyImage]=useState(null); // 添付画像（base64）
+  const replyImgRef=React.useRef(null);
+
+  /* ── コメント画像アップロード ── */
+  const handleReplyImgUpload=(e)=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{
+        // 800x800以内に圧縮
+        const MAX=800;
+        const ratio=Math.min(MAX/img.width,MAX/img.height,1);
+        const canvas=document.createElement("canvas");
+        canvas.width=img.width*ratio;
+        canvas.height=img.height*ratio;
+        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+        setReplyImage(canvas.toDataURL("image/jpeg",0.75));
+      };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value=""; // リセット
+  };
+  const[replySaving,setReplySaving]=useState(false);
+  const[editReplyTarget,setEditReplyTarget]=useState(null);
+  const[editReplyText,setEditReplyText]=useState("");
+  const[replyLiked,setReplyLiked]=useState(()=>new Set(lsGet("yosyuku_v4_replyLiked",[])));
+
+  /* ── コメントいいね（likedByも記録） ── */
+  const handleReplyLike=async(r,targetPost)=>{
+    if(!user){showToast("参加登録が必要です","err");return;}
+    const tp=targetPost||replyTarget||selected;
+    if(!tp)return;
+    const was=replyLiked.has(r.id);
+    const newLikes=was?Math.max(0,(r.likes||0)-1):(r.likes||0)+1;
+    const ns=new Set(replyLiked);was?ns.delete(r.id):ns.add(r.id);
+    setReplyLiked(ns);lsSet("yosyuku_v4_replyLiked",[...ns]);
+    const rawName=(user?.name||"匿名").trim();
+    const safeName=rawName.replace(/[.#$[\]/\s]/g,"_")||"user";
+    // UIに即反映
+    setReplies(prev=>prev.map(x=>{
+      if(x.id!==r.id)return x;
+      const lb={...(x.likedBy||{})};
+      if(was){delete lb[safeName];}else{lb[safeName]=rawName;}
+      return{...x,likes:newLikes,likedBy:lb};
+    }));
+    // Firebase保存
+    if(firebaseReady&&db){
+      try{
+        const updates={};
+        updates["replies/"+tp.id+"/"+r.id+"/likes"]=newLikes;
+        if(was){updates["replies/"+tp.id+"/"+r.id+"/likedBy/"+safeName]=null;}
+        else{updates["replies/"+tp.id+"/"+r.id+"/likedBy/"+safeName]=rawName;}
+        await db.ref().update(updates);
+      }catch(e){console.error(e);}
+    }else{
+      const arr=replies.map(x=>{
+        if(x.id!==r.id)return x;
+        const lb={...(x.likedBy||{})};
+        if(was){delete lb[safeName];}else{lb[safeName]=rawName;}
+        return{...x,likes:newLikes,likedBy:lb};
+      });
+      lsSet("yosyuku_replies_"+tp.id,arr);
+    }
+  };
+
+  /* ── コメント共感した人モーダル ── */
+  const[replyLikersTarget,setReplyLikersTarget]=useState(null);
+  const[lightboxImg,setLightboxImg]=useState(null); // 拡大表示する画像URL
+
+  /* ③ アイコン画像アップロード */
+  const imgInputRef=useRef(null);
+  const onboardImgRef=useRef(null);
+
+  const prevCountRef=useRef(0);
+  const unsubRef=useRef(null);
+
+  /* ── カテゴリーをFirebaseから読み込む ── */
+  useEffect(()=>{
+    if(firebaseReady&&db){
+      db.ref("categories").on("value",snap=>{
+        const val=snap.val();
+        if(val&&Array.isArray(val)&&val.length>0)setCategories(val);
+        else setCategories(DEFAULT_CATEGORIES);
+      });
+    }
+  },[]);
+
+
+  /* ── カテゴリーをFirebaseから読み込む ── */
+  useEffect(()=>{
+    if(firebaseReady&&db){
+      db.ref("categories").on("value",snap=>{
+        const val=snap.val();
+        if(val&&Array.isArray(val)&&val.length>0)setCategories(val);
+        else setCategories(DEFAULT_CATEGORIES);
+      });
+    }
+  },[]);
+  /* ── 初期ロード ── */
+  useEffect(()=>{
+    if(firebaseReady&&db){
+      const ref=db.ref("posts");
+      unsubRef.current=ref.on("value",snap=>{
+        const val=snap.val();
+        let arr=val?Object.values(val):[];
+        if(arr.length===0){SEEDS.forEach(s=>db.ref("posts").child(s.id).set(s));arr=SEEDS;}
+        // 既存のSEEDデータのlikesを0にリセット（初回のみ）
+        arr=arr.map(p=>{
+          if(["s1","s2","s3"].includes(p.id)&&!p._likesReset){
+            const updated={...p,likes:0,likedBy:{},bookmarks:0,_likesReset:true};
+            db.ref("posts").child(p.id).update({likes:0,likedBy:null,bookmarks:0,_likesReset:true});
+            return updated;
+          }
+          return p;
+        });
+        arr.sort((a,b)=>b.ts-a.ts);
+        if(arr.length>prevCountRef.current&&view!=="feed")setNewBadge(true);
+        prevCountRef.current=arr.length;
+        setPosts(arr);setLoading(false);
+      });
+    }else{
+      const stored=lsGet("yosyuku_v4_local");
+      const arr=stored||SEEDS;
+      if(!stored)lsSet("yosyuku_v4_local",arr);
+      setPosts(arr);prevCountRef.current=arr.length;setLoading(false);
+    }
+    return()=>{if(unsubRef.current&&db)db.ref("posts").off("value",unsubRef.current);};
+  },[]);
+
+  useEffect(()=>{
+    const t=setTimeout(()=>{
+      if(lsGet(KEY_USER)){
+        setView("feed"); // 登録済み → feed
+      }else if(sessionStorage.getItem("yosyuku_browse_only")){
+        setView("feed"); // 同セッション内で閲覧のみ選択済み → feed
+      }else{
+        setView("onboard"); // 未登録 → オンボーディング
+      }
+    },2000);
+    return()=>clearTimeout(t);
+  },[]);
+
+  useEffect(()=>{if(view==="feed")setNewBadge(false);},[view]);
+
+  /* ── 初回フォームにユーザー名をセット ── */
+  useEffect(()=>{
+    if(user&&!form.author){setForm(p=>({...p,author:user.name,flower:user.avatar}));}
+  },[user]);
+
+  /* ── カテゴリーが変わったらフォームのデフォルトも先頭に更新 ── */
+  useEffect(()=>{
+    if(categories.length>0){
+      setForm(p=>({...p,category:categories[0]}));
+      setEditForm(p=>({...p,category:categories[0]}));
+    }
+  },[categories]);
+
+  const showToast=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),3200);};
+
+  /* ② オンボーディング完了 */
+  const finishOnboard=()=>{
+    if(!onboard.name.trim())return;
+    const u={name:onboard.name.trim(),avatar:onboard.avatar,avatarImg:onboard.avatarImg||"",joined:new Date().toISOString()};
+    lsSet(KEY_USER,u);setUser(u);
+    setForm(p=>({...p,author:u.name,flower:u.avatar}));
+    setView("feed");showToast(`ようこそ、${u.name}さん！🌸`);
+  };
+
+  /* ③ 画像アップロード処理 */
+  const handleImgUpload=(e,target)=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      // Canvasで圧縮（200x200px, 品質0.7）→ localStorage容量対策
+      const img=new Image();
+      img.onload=()=>{
+        const SIZE=200;
+        const canvas=document.createElement("canvas");
+        const ratio=Math.min(SIZE/img.width, SIZE/img.height);
+        canvas.width=img.width*ratio;
+        canvas.height=img.height*ratio;
+        const ctx=canvas.getContext("2d");
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        const compressed=canvas.toDataURL("image/jpeg",0.72);
+        if(target==="onboard"){
+          setOnboard(p=>({...p,avatarImg:compressed}));
+        }else if(target==="profile"&&user){
+          const u={...user,avatarImg:compressed};
+          try{
+            lsSet(KEY_USER,u);
+            setUser(u);
+            showToast("アイコン画像を保存しました！📷");
+          }catch(err){
+            showToast("画像が大きすぎます。別の画像をお試しください","err");
+          }
+        }
+      };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  /* ── DB操作 ── */
+  const writePost=async(np)=>{
+    if(firebaseReady&&db){await db.ref("posts").child(np.id).set(np);}
+    else{const arr=[np,...posts];lsSet("yosyuku_v4_local",arr);setPosts(arr);}
+  };
+  const updatePost=async(id,data)=>{
+    if(firebaseReady&&db){await db.ref("posts").child(id).update(data);}
+    else{const arr=posts.map(p=>p.id===id?{...p,...data}:p);lsSet("yosyuku_v4_local",arr);setPosts(arr);}
+  };
+  const removePost=async(id)=>{
+    if(firebaseReady&&db){await db.ref("posts").child(id).remove();}
+    else{const arr=posts.filter(p=>p.id!==id);lsSet("yosyuku_v4_local",arr);setPosts(arr);}
+  };
+
+  /* ⑤ いいね（likedByに名前を記録） */
+  const handleLike=async(id)=>{
+    if(!user){showToast("参加登録が必要です","err");return;}
+    const post=posts.find(p=>p.id===id);if(!post)return;
+    const was=liked.has(id);
+    const newLikes=was?Math.max(0,post.likes-1):post.likes+1;
+
+    // ローカルstate即時反映
+    const ns=new Set(liked);was?ns.delete(id):ns.add(id);
+    setLiked(ns);lsSet(KEY_LIKED,[...ns]);
+    setPosts(prev=>prev.map(p=>p.id===id?{...p,likes:newLikes}:p));
+    if(selected?.id===id)setSelected(prev=>({...prev,likes:newLikes}));
+
+    // Firebase保存
+    if(firebaseReady&&db){
+      try{
+        const rawName=(user?.name||"匿名").trim();
+        // Firebase安全なキーに変換（特殊文字を_に）
+        const safeName=rawName.replace(/[.#$[\]/\s]/g,"_")||"user";
+        // トランザクションで安全に書き込み
+        const updates={};
+        updates["posts/"+id+"/likes"]=newLikes;
+        if(was){
+          updates["posts/"+id+"/likedBy/"+safeName]=null; // null=削除
+        }else{
+          updates["posts/"+id+"/likedBy/"+safeName]=rawName;
+        }
+        await db.ref().update(updates);
+      }catch(e){
+        console.error("Like save error:",e);
+        showToast("Firebaseへの保存に失敗："+e.message,"err");
+        // ロールバック
+        const rb=new Set(liked);was?rb.add(id):rb.delete(id);
+        setLiked(rb);lsSet(KEY_LIKED,[...rb]);
+        setPosts(prev=>prev.map(p=>p.id===id?{...p,likes:post.likes}:p));
+        return;
+      }
+    }else{
+      const likedBy={...(post.likedBy||{})};
+      const name=user?.name||"匿名";
+      if(was){delete likedBy[name];}else{likedBy[name]=name;}
+      const arr=posts.map(p=>p.id===id?{...p,likes:newLikes,likedBy}:p);
+      lsSet("yosyuku_v4_local",arr);
+    }
+    showToast(was?"💔 共感を取り消しました":"🩷 共感しました！");
+  };
+
+  const handleBookmark=async(id)=>{
+    if(!user){showToast("参加登録が必要です","err");return;}
+    const post=posts.find(p=>p.id===id);if(!post)return;
+    const was=bookmarks.has(id);
+    const newBk=Math.max(0,(post.bookmarks||0)+(was?-1:1));
+    const ns=new Set(bookmarks);was?ns.delete(id):ns.add(id);
+    setBookmarks(ns);lsSet(KEY_BM,[...ns]);
+    if(!firebaseReady)setPosts(prev=>prev.map(p=>p.id===id?{...p,bookmarks:newBk}:p));
+    if(selected?.id===id)setSelected(prev=>({...prev,bookmarks:newBk}));
+    await updatePost(id,{bookmarks:newBk});
+    showToast(was?"ブックマークを解除しました":"ブックマークしました📌");
+  };
+
+  /* ── 編集 ── */
+  const handleEditStart=(post)=>{setEditTarget(post);setEditForm({message:post.message,category:post.category,flower:post.flower});};
+  const handleEditSave=async()=>{
+    if(editForm.message.trim().length<10)return;
+    await updatePost(editTarget.id,{message:editForm.message.trim(),category:editForm.category,flower:editForm.flower});
+    setEditTarget(null);showToast("✏️ 予祝を更新しました！");
+  };
+
+  /* ── 削除 ── */
+  const handleDeleteConfirm=async()=>{
+    if(!deleteTarget)return;
+    await removePost(deleteTarget.id);
+    /* 返信も削除 */
+    if(firebaseReady&&db)db.ref(`replies/${deleteTarget.id}`).remove();
+    setDeleteTarget(null);
+    if(selected?.id===deleteTarget.id){setSelected(null);setView("feed");}
+    showToast("🗑️ 投稿を削除しました");
+  };
+
+
+  /* ── 管理者ログイン ── */
+  const handleAdminLogin=()=>{
+    if(adminPwInput===adminPassword){setIsAdmin(true);setAdminPwError(false);setAdminPwInput("");showToast("🔑 管理者としてログインしました");setView("admin");}
+    else{setAdminPwError(true);}
+  };
+
+  /* ── パスワード変更 ── */
+  const handlePwChange=async()=>{
+    setPwChangeError("");setPwChangeSuccess(false);
+    if(!newPw.trim()){setPwChangeError("新しいパスワードを入力してください");return;}
+    if(newPw.length<4){setPwChangeError("4文字以上で設定してください");return;}
+    if(newPw!==newPwConfirm){setPwChangeError("パスワードが一致しません");return;}
+    // localStorageに保存
+    lsSet("yosyuku_admin_pw",newPw);
+    setAdminPassword(newPw);
+    // Firebaseにも保存（オプション）
+    if(firebaseReady&&db){
+      try{await db.ref("adminConfig/password").set(newPw);}catch(e){}
+    }
+    setNewPw("");setNewPwConfirm("");
+    setPwChangeSuccess(true);
+    setTimeout(()=>setPwChangeSuccess(false),3000);
+    showToast("🔑 パスワードを変更しました！");
+  };
+
+  /* ── カテゴリー追加 ── */
+  const handleCatAdd=async()=>{
+    const t=catInput.trim();
+    if(!t||categories.includes(t))return;
+    const newCats=[...categories,t];
+    setCategories(newCats);
+    if(firebaseReady&&db)await db.ref("categories").set(newCats);
+    else lsSet("yosyuku_v4_categories",newCats);
+    setCatInput("");
+    showToast(`「${t}」を追加しました`);
+  };
+
+  /* ── カテゴリー削除 ── */
+  const handleCatDelete=async(cat)=>{
+    const newCats=categories.filter(c=>c!==cat);
+    if(newCats.length===0){showToast("最低1つのカテゴリーが必要です","err");return;}
+    setCategories(newCats);
+    if(firebaseReady&&db)await db.ref("categories").set(newCats);
+    else lsSet("yosyuku_v4_categories",newCats);
+    showToast(`「${cat}」を削除しました`);
+  };
+
+  /* ── カテゴリー順番変更（上へ） ── */
+  const handleCatUp=async(i)=>{
+    if(i===0)return;
+    const newCats=[...categories];
+    [newCats[i-1],newCats[i]]=[newCats[i],newCats[i-1]];
+    setCategories(newCats);
+    if(firebaseReady&&db)await db.ref("categories").set(newCats);
+  };
+
+  /* ── カテゴリー順番変更（下へ） ── */
+  const handleCatDown=async(i)=>{
+    if(i===categories.length-1)return;
+    const newCats=[...categories];
+    [newCats[i],newCats[i+1]]=[newCats[i+1],newCats[i]];
+    setCategories(newCats);
+    if(firebaseReady&&db)await db.ref("categories").set(newCats);
+  };
+
+  /* ── カテゴリーをデフォルトにリセット ── */
+  const handleCatReset=async()=>{
+    setCategories(DEFAULT_CATEGORIES);
+    if(firebaseReady&&db)await db.ref("categories").set(DEFAULT_CATEGORIES);
+    showToast("カテゴリーをリセットしました");
+  };
+
+
+  /* ── 投稿 ── */
+  const handleSubmit=async()=>{
+    const e={};
+    if(!form.author.trim())e.author="お名前を入力してください";
+    if(!form.message.trim())e.message="メッセージを入力してください";
+    if(form.message.trim().length<10)e.message="10文字以上で書いてみましょう";
+    setErrors(e);if(Object.keys(e).length)return;
+    setSaving(true);
+    const np={id:genId(),author:form.author.trim(),avatar:user?.avatar||"🌸",avatarImg:user?.avatarImg||"",category:form.category,message:form.message.trim(),flower:form.flower,date:new Date().toISOString(),likes:0,bookmarks:0,likedBy:{},replyCount:0,ts:Date.now()};
+    await writePost(np);
+    setForm(p=>({...p,message:"",category:categories[0]||DEFAULT_CATEGORIES[0]}));
+    setSaving(false);showToast("🌸 予祝をコミュニティに届けました！");
+    setTimeout(()=>setView("feed"),1600);
+  };
+
+  /* ── 返信ロード ── */
+  /* repliesだけロード（詳細ページ自動ロード用） */
+  const loadReplies=async(post)=>{
+    if(!post)return;
+    if(firebaseReady&&db){
+      const snap=await db.ref("replies/"+post.id).get();
+      const val=snap.val();
+      setReplies(val?Object.values(val).sort((a,b)=>a.ts-b.ts):[]);
+    }else{
+      setReplies(lsGet("yosyuku_replies_"+post.id)||[]);
+    }
+  };
+
+  const openReplies=async(post)=>{
+    setReplyTarget(post);setReplyText("");setEditReplyTarget(null);
+    if(firebaseReady&&db){
+      const snap=await db.ref(`replies/${post.id}`).get();
+      const val=snap.val();
+      setReplies(val?Object.values(val).sort((a,b)=>a.ts-b.ts):[]);
+    }else{
+      setReplies(lsGet(`yosyuku_replies_${post.id}`)||[]);
+    }
+  };
+
+  /* ── 返信投稿 ── */
+  const handleReplySubmit=async()=>{
+    if(!user){showToast("参加登録が必要です","err");return;}
+    if(!replyText.trim()&&!replyImage)return; // テキストか画像どちらかあればOK
+    if(replyText.trim().length>0&&replyText.trim().length<2)return;
+    // replyTargetがnullの場合はselected（詳細ページ）を使う
+    const targetPost=replyTarget||selected;
+    if(!targetPost){showToast("投稿が見つかりません","err");return;}
+    setReplySaving(true);
+    const nr={
+      id:genId(),
+      author:user?.name||"匿名",
+      avatar:user?.avatar||"🌸",
+      avatarImg:user?.avatarImg||"",
+      message:replyText.trim(),
+      image:replyImage||null,
+      ts:Date.now(),
+      date:new Date().toISOString()
+    };
+    try{
+      if(firebaseReady&&db){
+        await db.ref("replies/"+targetPost.id+"/"+nr.id).set(nr);
+        const newCount=(targetPost.replyCount||0)+1;
+        await db.ref("posts/"+targetPost.id+"/replyCount").set(newCount);
+        // UIのreplyCountも即時更新
+        setPosts(prev=>prev.map(p=>p.id===targetPost.id?{...p,replyCount:newCount}:p));
+        if(selected?.id===targetPost.id)setSelected(prev=>({...prev,replyCount:newCount}));
+      }else{
+        const arr=[...replies,nr];
+        lsSet("yosyuku_replies_"+targetPost.id,arr);
+        setReplies(arr);
+        const newCount=(targetPost.replyCount||0)+1;
+        const arr2=posts.map(p=>p.id===targetPost.id?{...p,replyCount:newCount}:p);
+        lsSet("yosyuku_v4_local",arr2);setPosts(arr2);
+        if(selected?.id===targetPost.id)setSelected(prev=>({...prev,replyCount:newCount}));
+      }
+      setReplyText("");
+      setReplyImage(null);
+      await loadReplies(targetPost);
+      showToast("💬 コメントを送信しました！");
+    }catch(e){
+      console.error("Reply error:",e);
+      showToast("送信に失敗しました。もう一度お試しください","err");
+    }
+    setReplySaving(false);
+  };
+
+  /* ── 返信編集 ── */
+  const handleReplyEditSave=async()=>{
+    if(!editReplyText.trim())return;
+    const targetPost=replyTarget||selected;
+    if(!targetPost)return;
+    if(firebaseReady&&db){
+      await db.ref("replies/"+targetPost.id+"/"+editReplyTarget.id).update({message:editReplyText.trim()});
+    }else{
+      const arr=replies.map(r=>r.id===editReplyTarget.id?{...r,message:editReplyText.trim()}:r);
+      lsSet("yosyuku_replies_"+targetPost.id,arr);
+    }
+    await loadReplies(targetPost);
+    setEditReplyTarget(null);setEditReplyText("");showToast("返信を更新しました");
+  };
+
+  /* ── 返信削除 ── */
+  const handleReplyDelete=async(reply)=>{
+    const targetPost=replyTarget||selected;
+    if(!targetPost)return;
+    if(firebaseReady&&db){
+      await db.ref("replies/"+targetPost.id+"/"+reply.id).remove();
+      const newCount=Math.max(0,(targetPost.replyCount||1)-1);
+      await db.ref("posts/"+targetPost.id+"/replyCount").set(newCount);
+      setPosts(prev=>prev.map(p=>p.id===targetPost.id?{...p,replyCount:newCount}:p));
+      if(selected?.id===targetPost.id)setSelected(prev=>({...prev,replyCount:newCount}));
+    }else{
+      const arr=replies.filter(r=>r.id!==reply.id);
+      lsSet("yosyuku_replies_"+targetPost.id,arr);
+    }
+    await loadReplies(targetPost);
+    showToast("コメントを削除しました");
+  };
+
+  /* ── 表示データ ── */
+  const displayed=(filter==="すべて"?posts:posts.filter(p=>p.category===filter)).slice().sort((a,b)=>sort==="hot"?(b.likes+(b.bookmarks||0))-(a.likes+(a.bookmarks||0)):b.ts-a.ts);
+  const savedPosts=posts.filter(p=>bookmarks.has(p.id));
+  const myPosts=posts.filter(p=>p.author===user?.name);
+  const totalLikes=posts.reduce((s,p)=>s+p.likes,0);
+
+  /* ════════════════════════════════════════
+     レンダリング
+  ════════════════════════════════════════ */
+  return<div style={{minHeight:"100vh",position:"relative"}}>
+    <Petals/>
+
+    {/* SPLASH */}
+    {view==="splash"&&<div style={{position:"fixed",inset:0,zIndex:200,background:"linear-gradient(150deg,#fff0f5,#fef8f0,#f0ebff)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",animation:"fadeUp .5s ease"}}>
+      <div style={{fontSize:76,animation:"shimmer 1.8s ease infinite",marginBottom:20}}>🌸</div>
+      <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:34,color:"#6b1a3a",letterSpacing:".1em",marginBottom:10}}>予祝ひろば</div>
+      <div style={{fontSize:13,color:"#c06080",letterSpacing:".2em",fontFamily:"'Noto Serif JP',serif"}}>未来の喜びを、先に祝おう</div>
+      <div style={{marginTop:44,display:"flex",gap:10}}>{[0,1,2].map(i=><div key={i} style={{width:9,height:9,borderRadius:"50%",background:i===0?"#e8728a":"#f0c8d8",animation:`pulse 1.5s ease ${i*0.32}s infinite`}}/>)}</div>
+    </div>}
+
+    {/* ONBOARDING */}
+    {view==="onboard"&&<div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px 16px",animation:"fadeUp .45s ease",position:"relative",zIndex:10}}>
+      <div style={{width:"100%",maxWidth:430,background:"#fff",borderRadius:28,padding:"40px 28px",boxShadow:"0 12px 60px rgba(200,90,140,.15)",border:"1px solid rgba(232,180,196,.35)"}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:54,marginBottom:14}}>🌸</div>
+          <h1 style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:22,color:"#6b1a3a",margin:"0 0 8px"}}>予祝ひろばへようこそ</h1>
+          <p style={{fontSize:13,color:"#9a5070",lineHeight:1.85,margin:0,fontFamily:"'Noto Serif JP',serif"}}>ニックネームとアイコンを選んで参加しましょう✨</p>
+        </div>
+
+        {/* ③ アイコン画像アップロード */}
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div onClick={()=>onboardImgRef.current?.click()} style={{width:72,height:72,borderRadius:"50%",background:"linear-gradient(135deg,#fce4ec,#f8bbd9)",margin:"0 auto 10px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,cursor:"pointer",border:"2px dashed #e8b4c4",position:"relative"}}>
+            {onboard.avatarImg?<img src={onboard.avatarImg} style={{width:"100%",height:"100%",borderRadius:"50%",objectFit:"cover"}}/>:<span>{onboard.avatar}</span>}
+            <div style={{position:"absolute",bottom:0,right:0,background:"#e8728a",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff"}}>📷</div>
+          </div>
+          <input ref={onboardImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>handleImgUpload(e,"onboard")}/>
+          <div style={{fontSize:11,color:"#c0a0b0",fontFamily:"'Noto Serif JP',serif"}}>タップで写真をアップロード</div>
+        </div>
+
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:13,color:"#8b4060",marginBottom:8,fontFamily:"'Noto Serif JP',serif"}}>絵文字アイコン</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
+            {AVATARS.map(a=><button key={a} onClick={()=>setOnboard(p=>({...p,avatar:a}))} style={{fontSize:20,width:38,height:38,border:onboard.avatar===a?"2.5px solid #e8728a":"1.5px solid #e8b4c4",borderRadius:10,background:onboard.avatar===a?"#fce4ec":"#fff",cursor:"pointer",transition:"all .15s",transform:onboard.avatar===a?"scale(1.18)":"scale(1)"}}>{a}</button>)}
+          </div>
+        </div>
+
+        <div style={{marginBottom:28}}>
+          {/* ① ニックネームのプレースホルダーを分かりやすく */}
+          <div style={{fontSize:13,color:"#8b4060",marginBottom:8,fontFamily:"'Noto Serif JP',serif"}}>ニックネーム <span style={{color:"#e8728a"}}>*</span></div>
+          <input className="inp inp-ok" value={onboard.name} onChange={e=>setOnboard(p=>({...p,name:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&finishOnboard()} placeholder="例：さくら、花子、Hana… （20文字まで）" maxLength={20}/>
+        </div>
+
+        <button className="btn-p" disabled={!onboard.name.trim()} onClick={finishOnboard} style={{width:"100%",padding:"15px",fontSize:16}}>
+          {onboard.avatarImg?"📷":"　"+onboard.avatar+"　"} はじめる
+        </button>
+
+        {/* 区切り線 */}
+        <div style={{display:"flex",alignItems:"center",gap:10,margin:"18px 0"}}>
+          <div style={{flex:1,height:1,background:"rgba(232,180,196,.4)"}}/>
+          <span style={{fontSize:12,color:"#c0a0b0",fontFamily:"'Noto Serif JP',serif"}}>または</span>
+          <div style={{flex:1,height:1,background:"rgba(232,180,196,.4)"}}/>
+        </div>
+
+        {/* 閲覧のみボタン */}
+        <button onClick={()=>{sessionStorage.setItem("yosyuku_browse_only","1");setView("feed");}} style={{
+          width:"100%",padding:"13px",fontSize:15,
+          background:"#fff",color:"#9a5070",
+          border:"2px solid #e8b4c4",borderRadius:50,
+          fontFamily:"'Noto Serif JP',serif",cursor:"pointer",
+          transition:"all .2s",letterSpacing:".03em"
+        }}>
+          👀 登録せずに閲覧のみする
+        </button>
+        <div style={{textAlign:"center",marginTop:10,fontSize:11,color:"#c0a0b0",fontFamily:"'Noto Serif JP',serif",lineHeight:1.6}}>
+          ※閲覧のみの場合、投稿・共感・コメントはできません
+        </div>
+      </div>
+    </div>}
+
+    {/* メイン */}
+    {!["splash","onboard"].includes(view)&&<>
+      {/* ヘッダー */}
+      <header style={{position:"sticky",top:0,zIndex:100,background:"rgba(255,248,249,.93)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(232,180,196,.35)",padding:"0 16px"}}>
+        <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",height:62}}>
+          <div onClick={()=>setView("feed")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:9}}>
+            <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#fce4ec,#f8bbd9)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🌸</div>
+            <div>
+              <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:17,color:"#6b1a3a",letterSpacing:".08em",lineHeight:1.1}}>予祝ひろば</div>
+              <div style={{fontSize:9,color:"#c06080",letterSpacing:".14em",fontFamily:"'Noto Serif JP',serif"}}>{firebaseReady?"🟢 みんなで共有中":"🟡 ローカルモード"}</div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            {user&&<div onClick={()=>setView("mypage")} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",borderRadius:50,border:"1.5px solid rgba(232,180,196,.4)",background:"#fff",cursor:"pointer"}}>
+              <Avatar src={user.avatarImg} emoji={user.avatar} size={24}/>
+              <span style={{fontSize:13,color:"#9a5070",fontFamily:"'Noto Serif JP',serif",maxWidth:70,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</span>
+            </div>}
+            <div style={{position:"relative"}}>
+              <button className="btn-p" onClick={()=>setView("write")} style={{padding:"9px 18px",fontSize:14}}>✨ 予祝を書く</button>
+              {newBadge&&<div style={{position:"absolute",top:-4,right:-4,width:10,height:10,borderRadius:"50%",background:"#ff6b6b",animation:"pulse 1s ease infinite"}}/>}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* トースト */}
+      {toast&&<div style={{position:"fixed",top:76,left:"50%",transform:"translateX(-50%)",background:toast.type==="err"?"linear-gradient(135deg,#e87272,#c85a5a)":toast.type==="info"?"linear-gradient(135deg,#6ec87a,#4aaa5e)":"linear-gradient(135deg,#e8728a,#c85a8e)",color:"#fff",padding:"13px 28px",borderRadius:50,fontSize:14,zIndex:9999,boxShadow:"0 8px 32px rgba(200,90,142,.4)",animation:"popIn .3s ease",fontFamily:"'Noto Serif JP',serif",letterSpacing:".04em",maxWidth:"92vw",textAlign:"center",whiteSpace:"nowrap"}}>{toast.msg}</div>}
+
+      <main style={{maxWidth:680,margin:"0 auto",padding:"22px 14px 110px",position:"relative",zIndex:1}}>
+
+        {/* FEED */}
+        {view==="feed"&&<div style={{animation:"fadeUp .4s ease"}}>
+          <div style={{textAlign:"center",marginBottom:26,padding:"24px 16px 20px",background:"rgba(255,255,255,.72)",borderRadius:22,border:"1px solid rgba(232,180,196,.22)",backdropFilter:"blur(10px)"}}>
+            <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:700,fontSize:11,color:"#c06080",letterSpacing:".3em",marginBottom:10}}>YOSYUKU COMMUNITY</div>
+            <h1 style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:24,color:"#6b1a3a",lineHeight:1.5,margin:"0 0 10px"}}>なりたい未来を<br/>先に喜んでしまおう</h1>
+            <p style={{fontSize:13,color:"#9a5070",lineHeight:1.85,margin:"0 0 18px",fontFamily:"'Noto Serif JP',serif"}}>仲間の予祝を読んで、あなたの夢も引き寄せましょう 🌸</p>
+            <div style={{display:"flex",justifyContent:"center",gap:28}}>
+              {[{label:"投稿数",val:posts.length,icon:"📝"},{label:"共感の数",val:totalLikes,icon:"🩷"}].map(s=><div key={s.label} style={{textAlign:"center"}}><div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:19,color:"#c85a8e"}}>{s.icon} {s.val}</div><div style={{fontSize:10,color:"#b08090",letterSpacing:".08em",fontFamily:"'Noto Serif JP',serif",marginTop:2}}>{s.label}</div></div>)}
+            </div>
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <div className="no-scrollbar" style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,marginBottom:8}}>
+              {["すべて",...categories].map(c=><button key={c} className={`chip ${filter===c?"chip-on":"chip-off"}`} onClick={()=>setFilter(c)} style={{padding:"7px 14px",fontSize:12}}>{c}</button>)}
+            </div>
+            <div style={{display:"flex",justifyContent:"flex-end",gap:6}}>
+              {[["new","🕐 新着"],["hot","🔥 人気"]].map(([v,l])=><button key={v} className={`chip ${sort===v?"chip-on":"chip-off"}`} onClick={()=>setSort(v)} style={{padding:"5px 13px",fontSize:12}}>{l}</button>)}
+            </div>
+          </div>
+
+          {loading?<div style={{textAlign:"center",padding:"60px 0",color:"#c06080"}}><div style={{fontSize:36,animation:"spin 1s linear infinite",display:"inline-block"}}>🌸</div><div style={{marginTop:12,fontFamily:"'Noto Serif JP',serif",fontSize:14}}>読み込み中…</div></div>
+          :<div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {displayed.length===0?<EmptyState onWrite={()=>setView("write")}/>
+            :displayed.map((p,i)=><PostCard key={p.id} post={p} index={i} liked={liked.has(p.id)} bookmarked={bookmarks.has(p.id)} onOpen={()=>{setSelected(p);setView("detail");setReplies([]);loadReplies(p);}} onLike={()=>handleLike(p.id)} onBookmark={()=>handleBookmark(p.id)} isOwner={user?.name===p.author} onEdit={handleEditStart} onDelete={setDeleteTarget} onShowLikers={openLikers} onComment={(post)=>{setSelected(post);setView("detail");setReplies([]);loadReplies(post);}}/>)}
+          </div>}
+        </div>}
+
+        {/* DETAIL */}
+        {view==="detail"&&selected&&<div style={{animation:"fadeUp .35s ease"}}>
+          <button className="btn-s" onClick={()=>setView("feed")} style={{marginBottom:20,padding:"10px 22px",fontSize:14}}>← 一覧に戻る</button>
+          <div style={{background:"#fff",borderRadius:24,padding:"34px 24px",boxShadow:"0 8px 44px rgba(200,100,140,.13)",border:"1px solid rgba(232,180,196,.35)",position:"relative",overflow:"hidden"}}>
+            <div style={{position:"absolute",top:-28,right:-28,fontSize:140,opacity:.04,pointerEvents:"none"}}>{selected.flower}</div>
+            <div style={{textAlign:"center",marginBottom:24}}>
+              <Avatar src={selected.avatarImg} emoji={selected.avatar||selected.flower} size={64}/>
+              <div style={{marginTop:12,fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:20,color:"#6b1a3a"}}>{selected.author}</div>
+              <div style={{fontSize:12,color:"#b08090",marginTop:4,fontFamily:"'Noto Serif JP',serif"}}>{fmtDate(selected.date)}</div>
+              <span style={{marginTop:10,display:"inline-block",background:"linear-gradient(135deg,#fce4ec,#f8bbd9)",color:"#ad4775",fontSize:12,padding:"4px 14px",borderRadius:20,fontFamily:"'Noto Serif JP',serif"}}>{selected.category}</span>
+            </div>
+            <div style={{borderTop:"1px dashed #f0c8d8",borderBottom:"1px dashed #f0c8d8",padding:"26px 8px",margin:"0 0 22px"}}>
+              <p style={{fontSize:16,color:"#3a1520",lineHeight:2.1,margin:0,fontFamily:"'Noto Serif JP',serif",textAlign:"left",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{selected.message}</p>
+            </div>
+            <div style={{display:"flex",justifyContent:"center",gap:12,marginBottom:18,flexWrap:"wrap"}}>
+              <button onClick={()=>handleLike(selected.id)} style={{background:liked.has(selected.id)?"linear-gradient(135deg,#e8728a,#c85a8e)":"#fff",border:liked.has(selected.id)?"none":"2px solid #e8b4c4",borderRadius:50,padding:"12px 22px",fontSize:15,cursor:"pointer",color:liked.has(selected.id)?"#fff":"#c05070",display:"inline-flex",alignItems:"center",gap:7,fontFamily:"'Noto Serif JP',serif",transition:"all .2s"}}>{liked.has(selected.id)?"🩷 共感しました":"🤍 共感する"} {selected.likes}</button>
+              {/* ⑤ 共感した人を見る */}
+              <button onClick={()=>openLikers(selected)} style={{background:"#fff",border:"2px solid #e8b4c4",borderRadius:50,padding:"12px 16px",fontSize:14,cursor:"pointer",color:"#c05070",fontFamily:"'Noto Serif JP',serif"}}>👥 共感した人</button>
+              <button onClick={()=>handleBookmark(selected.id)} style={{background:bookmarks.has(selected.id)?"#fce4ec":"#fff",border:"2px solid #e8b4c4",borderRadius:50,padding:"12px 16px",fontSize:15,cursor:"pointer",color:"#c05070"}}>{bookmarks.has(selected.id)?"📌":"🔖"}</button>
+            </div>
+            {/* ── インラインコメント欄 ── */}
+            <div style={{borderTop:"1px solid #f0d8e0",paddingTop:18,marginTop:6}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+                <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:700,fontSize:15,color:"#6b1a3a"}}>
+                  💬 コメント {selected.replyCount>0&&<span style={{fontSize:13,color:"#c06080",fontWeight:400}}>({selected.replyCount}件)</span>}
+                </div>
+                <button onClick={()=>openReplies(selected)} style={{background:"transparent",border:"1.5px solid #e8b4c4",borderRadius:50,padding:"5px 14px",fontSize:12,cursor:"pointer",color:"#c06080",fontFamily:"'Noto Serif JP',serif"}}>
+                  すべて見る
+                </button>
+              </div>
+
+              {/* コメント一覧（全件表示・編集削除可） */}
+              {replies.length>0&&<div style={{marginBottom:14}}>
+                {replies.map(r=><div key={r.id} style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
+                  <Avatar src={r.avatarImg} emoji={r.avatar} size={30}/>
+                  <div style={{flex:1,background:"#fdf8fa",borderRadius:12,padding:"8px 12px",border:"1px solid rgba(232,180,196,.2)"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
+                      <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                        <span style={{fontFamily:"'Shippori Mincho',serif",fontWeight:700,fontSize:13,color:"#6b1a3a"}}>{r.author}</span>
+                        <span style={{fontSize:10,color:"#b08090",fontFamily:"'Noto Serif JP',serif"}}>{fmtDate(r.date)}</span>
+                      </div>
+                      {/* 自分のコメントのみ編集・削除 */}
+                      {user?.name===r.author&&<div style={{display:"flex",gap:4,flexShrink:0}}>
+                        <button onClick={()=>{setEditReplyTarget(r);setEditReplyText(r.message);}}
+                          style={{background:"transparent",border:"1px solid #e8b4c4",borderRadius:20,padding:"2px 8px",fontSize:11,cursor:"pointer",color:"#c06080",fontFamily:"'Noto Serif JP',serif"}}>✏️ 編集</button>
+                        <button onClick={()=>handleReplyDelete(r)}
+                          style={{background:"transparent",border:"1px solid #f0b4b4",borderRadius:20,padding:"2px 8px",fontSize:11,cursor:"pointer",color:"#e07070",fontFamily:"'Noto Serif JP',serif"}}>🗑️</button>
+                      </div>}
+                    </div>
+                    {/* 編集中は入力欄を表示 */}
+                    {editReplyTarget?.id===r.id
+                      ?<div>
+                        <textarea className="inp inp-ok" value={editReplyText}
+                          onChange={e=>setEditReplyText(e.target.value)} rows={2}
+                          style={{border:"1.5px solid #e8728a",resize:"none",marginBottom:6,lineHeight:1.7,fontSize:13}}/>
+                        <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+                          <button className="btn-s" onClick={()=>{setEditReplyTarget(null);setEditReplyText("");}}
+                            style={{padding:"5px 12px",fontSize:12}}>キャンセル</button>
+                          <button className="btn-p" onClick={handleReplyEditSave}
+                            style={{padding:"5px 14px",fontSize:12}}>💾 保存</button>
+                        </div>
+                      </div>
+                      :<div>
+                        {r.message&&<p style={{fontSize:13,color:"#3a1520",lineHeight:1.7,margin:"0 0 6px",fontFamily:"'Noto Serif JP',serif",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{r.message}</p>}
+                        {r.image&&<img src={r.image} style={{maxWidth:"100%",maxHeight:200,borderRadius:10,marginBottom:6,border:"1px solid #f0d8e0",display:"block"}} onClick={e=>{e.stopPropagation();setLightboxImg(r.image);}}/>}
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <button onClick={()=>handleReplyLike(r,selected)} disabled={!user} style={{
+                            background:replyLiked.has(r.id)?"linear-gradient(135deg,#fce4ec,#f8bbd9)":"transparent",
+                            border:replyLiked.has(r.id)?"none":"1px solid #e8b4c4",
+                            borderRadius:50,padding:"3px 12px",fontSize:12,cursor:"pointer",
+                            color:"#c05070",display:"inline-flex",alignItems:"center",gap:4,
+                            fontFamily:"'Noto Serif JP',serif",transition:"all .2s"
+                          }}>{replyLiked.has(r.id)?"🩷":"🤍"} {r.likes||0}</button>
+                          {Object.keys(r.likedBy||{}).length>0&&
+                            <button onClick={()=>setReplyLikersTarget(r)} style={{
+                              background:"transparent",border:"none",fontSize:12,cursor:"pointer",
+                              color:"#c0a0b8",fontFamily:"'Noto Serif JP',serif",
+                              display:"inline-flex",alignItems:"center",gap:3
+                            }}>👥 {Object.keys(r.likedBy||{}).length}人</button>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>)}
+              </div>}
+
+              {/* コメント書き込みエリア */}
+              <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                <Avatar src={user?.avatarImg} emoji={user?.avatar||"🌸"} size={34}/>
+                <div style={{flex:1}}>
+                  <textarea className="inp inp-ok"
+                    value={replyText}
+                    onChange={e=>setReplyText(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey))handleReplySubmit();}}
+                    rows={2}
+                    placeholder="コメントを書く… (Cmd+Enterで送信)"
+                    style={{border:"1.5px solid #e8b4c4",resize:"none",lineHeight:1.75,marginBottom:8,fontSize:14}}
+                  />
+                  {/* 画像プレビュー */}
+                  {replyImage&&<div style={{position:"relative",marginBottom:8,display:"inline-block"}}>
+                    <img src={replyImage} style={{maxWidth:"100%",maxHeight:160,borderRadius:10,border:"1px solid #e8b4c4",display:"block"}}/>
+                    <button onClick={()=>setReplyImage(null)} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.5)",border:"none",borderRadius:"50%",width:22,height:22,cursor:"pointer",color:"#fff",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                  </div>}
+                  <input ref={replyImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
+                    const file=e.target.files[0];if(!file)return;
+                    const reader=new FileReader();
+                    reader.onload=ev=>{
+                      const img=new Image();
+                      img.onload=()=>{
+                        const canvas=document.createElement("canvas");
+                        const MAX=600;
+                        const r=Math.min(MAX/img.width,MAX/img.height,1);
+                        canvas.width=img.width*r;canvas.height=img.height*r;
+                        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+                        setReplyImage(canvas.toDataURL("image/jpeg",0.75));
+                      };
+                      img.src=ev.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                    e.target.value="";
+                  }}/>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    {user&&<button onClick={()=>replyImgRef.current?.click()} style={{background:"transparent",border:"1.5px solid #e8d4f0",borderRadius:50,padding:"6px 14px",fontSize:13,cursor:"pointer",color:"#9060b0",fontFamily:"'Noto Serif JP',serif",display:"flex",alignItems:"center",gap:5}}>
+                      🖼️ 画像
+                    </button>}
+                    <button className="btn-p" onClick={handleReplySubmit}
+                      disabled={replySaving||(!replyText.trim()&&!replyImage)}
+                      style={{padding:"9px 22px",fontSize:14,marginLeft:"auto"}}>
+                      {replySaving
+                        ?<span style={{animation:"spin .8s linear infinite",display:"inline-block"}}>🌸</span>
+                        :"💬 送信"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{textAlign:"center",marginTop:16,fontSize:12,color:"#9a5070",fontFamily:"'Noto Serif JP',serif",lineHeight:1.7}}>💌 この予祝があなたの心にも届きますように</div>
+          </div>
+        </div>}
+
+        {/* WRITE */}
+        {view==="write"&&<div style={{animation:"fadeUp .35s ease"}}>
+          <button className="btn-s" onClick={()=>setView("feed")} style={{marginBottom:20,padding:"10px 22px",fontSize:14}}>← 戻る</button>
+          <div style={{background:"#fff",borderRadius:24,padding:"28px 20px",boxShadow:"0 8px 44px rgba(200,100,140,.11)",border:"1px solid rgba(232,180,196,.35)"}}>
+            <h2 style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:21,color:"#6b1a3a",textAlign:"center",marginBottom:4}}>予祝メッセージを書く</h2>
+            <p style={{textAlign:"center",color:"#9a5070",fontSize:12,fontFamily:"'Noto Serif JP',serif",marginBottom:20,lineHeight:1.8}}>「もう叶った！」として、未来の喜びを今の言葉で✨</p>
+
+            {/* ★ アイコン・ニックネームプレビュー */}
+            <div style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",background:"linear-gradient(135deg,#fdf4f7,#f8f0ff)",borderRadius:16,border:"1px solid rgba(232,180,196,.3)",marginBottom:24}}>
+              <Avatar src={user?.avatarImg} emoji={user?.avatar||"🌸"} size={52}/>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:17,color:"#6b1a3a"}}>{user?.name||"あなた"}</div>
+                <div style={{fontSize:11,color:"#b08090",fontFamily:"'Noto Serif JP',serif",marginTop:2}}>この名前・アイコンで投稿されます</div>
+              </div>
+              <button onClick={()=>setView("mypage")} style={{background:"transparent",border:"1.5px solid #e8b4c4",borderRadius:50,padding:"6px 12px",fontSize:12,cursor:"pointer",color:"#c06080",fontFamily:"'Noto Serif JP',serif",whiteSpace:"nowrap"}}>変更 →</button>
+            </div>
+
+
+
+            <div style={{marginBottom:18}}>
+              <div style={{fontSize:13,color:"#8b4060",marginBottom:8,fontFamily:"'Noto Serif JP',serif"}}>お花を選ぶ</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{FLOWERS.map(f=><button key={f} onClick={()=>setForm(p=>({...p,flower:f}))} style={{fontSize:20,width:38,height:38,border:form.flower===f?"2.5px solid #e8728a":"1.5px solid #e8b4c4",borderRadius:10,background:form.flower===f?"#fce4ec":"#fff",cursor:"pointer",transition:"all .15s",transform:form.flower===f?"scale(1.18)":"scale(1)"}}>{f}</button>)}</div>
+            </div>
+
+            {/* お名前は上のプレビューで表示済み・非ユーザー時のみ入力欄を表示 */}
+            {!user&&<Field label="お名前（ニックネーム）" error={errors.author}>
+              <input className={`inp ${errors.author?"inp-err":"inp-ok"}`} value={form.author} onChange={e=>setForm(p=>({...p,author:e.target.value}))} placeholder="例：さくら" style={{border:errors.author?"2px solid #e8728a":"1.5px solid #e8b4c4"}}/>
+            </Field>}
+
+            <Field label="カテゴリー">
+              <select className="inp inp-ok" style={{appearance:"none",cursor:"pointer",border:"1.5px solid #e8b4c4"}} value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))}>
+                {categories.map(c=><option key={c}>{c}</option>)}
+              </select>
+            </Field>
+
+            <Field label={`予祝メッセージ（${form.message.length}文字）`} error={errors.message}>
+              <textarea className={`inp ${errors.message?"inp-err":"inp-ok"}`} value={form.message} onChange={e=>setForm(p=>({...p,message:e.target.value}))} rows={5} placeholder={"例：念願のお店をオープンできました！\nお客様の笑顔に囲まれて毎日幸せです✨"} style={{resize:"vertical",lineHeight:1.85,border:errors.message?"2px solid #e8728a":"1.5px solid #e8b4c4"}}/>
+            </Field>
+
+            <div style={{background:"linear-gradient(135deg,#fce4ec18,#f8bbd918)",border:"1px solid #f0c8d8",borderRadius:12,padding:"12px 16px",marginBottom:16}}>
+              <div style={{fontSize:12,color:"#9a5070",lineHeight:1.75,fontFamily:"'Noto Serif JP',serif"}}>💡 <strong>予祝のコツ：</strong>「〜したい」ではなく<strong>「〜できました！」</strong>と書きましょう。</div>
+            </div>
+            <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+              <button className="btn-s" onClick={()=>setView("feed")} style={{padding:"13px 22px",fontSize:15}}>キャンセル</button>
+              <button className="btn-p" onClick={handleSubmit} disabled={saving} style={{padding:"13px 30px",fontSize:15}}>{saving?<span style={{display:"flex",alignItems:"center",gap:7}}><span style={{animation:"spin .8s linear infinite",display:"inline-block"}}>🌸</span>送信中…</span>:"🌸 みんなに届ける"}</button>
+            </div>
+          </div>
+        </div>}
+
+        {/* BOOKMARKS */}
+        {view==="bookmarks"&&<div style={{animation:"fadeUp .35s ease"}}>
+          <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:18}}>
+            <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:20,color:"#6b1a3a"}}>📌 ブックマーク</div>
+            <div style={{fontSize:12,color:"#b08090",fontFamily:"'Noto Serif JP',serif"}}>{savedPosts.length}件</div>
+          </div>
+          {savedPosts.length===0?<EmptyState msg="まだブックマークがありません" sub="気になる予祝を保存しましょう"/>
+          :<div style={{display:"flex",flexDirection:"column",gap:12}}>{savedPosts.map((p,i)=><PostCard key={p.id} post={p} index={i} liked={liked.has(p.id)} bookmarked={bookmarks.has(p.id)} onOpen={()=>{setSelected(p);setView("detail");setReplies([]);loadReplies(p);}} onLike={()=>handleLike(p.id)} onBookmark={()=>handleBookmark(p.id)} isOwner={user?.name===p.author} onEdit={handleEditStart} onDelete={setDeleteTarget} onShowLikers={openLikers} onComment={(post)=>{setSelected(post);setView("detail");setReplies([]);loadReplies(post);}}/>)}</div>}
+        </div>}
+
+        {/* MYPAGE */}
+        {view==="mypage"&&user&&<div style={{animation:"fadeUp .35s ease"}}>
+          <div style={{background:"#fff",borderRadius:22,padding:"26px 20px",boxShadow:"0 4px 28px rgba(200,100,140,.1)",border:"1px solid rgba(232,180,196,.35)",marginBottom:20}}>
+
+            {/* ── プロフィールヘッダー ── */}
+            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
+              <div style={{position:"relative"}}>
+                <Avatar src={user.avatarImg} emoji={user.avatar} size={68}/>
+              </div>
+              <div>
+                <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:22,color:"#6b1a3a"}}>{user.name}</div>
+                <div style={{fontSize:12,color:"#b08090",marginTop:3,fontFamily:"'Noto Serif JP',serif"}}>参加日：{fmtDate(user.joined)}</div>
+              </div>
+            </div>
+
+            {/* ── アイコン変更エリア ── */}
+            <div style={{background:"linear-gradient(135deg,#fdf4f7,#f8f0ff)",borderRadius:16,padding:"18px",marginBottom:20,border:"1px solid rgba(232,180,196,.3)"}}>
+              <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:700,fontSize:14,color:"#6b1a3a",marginBottom:14}}>🖼️ アイコンを変更する</div>
+
+              {/* 写真アップロードボタン */}
+              <div style={{marginBottom:14}}>
+                <input ref={imgInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>handleImgUpload(e,"profile")}/>
+                <button onClick={()=>imgInputRef.current?.click()} style={{width:"100%",padding:"12px",background:"linear-gradient(135deg,#e8728a,#c85a8e)",color:"#fff",border:"none",borderRadius:12,fontSize:14,cursor:"pointer",fontFamily:"'Noto Serif JP',serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 4px 14px rgba(200,90,142,.3)"}}>
+                  📷 写真をアップロード
+                </button>
+                {user.avatarImg&&<button onClick={()=>{const u={...user,avatarImg:"",avatar:user.avatar||"🌸"};lsSet(KEY_USER,u);setUser(u);showToast("写真を削除しました");}} style={{width:"100%",padding:"10px",background:"transparent",border:"1.5px solid #f0b4b4",borderRadius:12,fontSize:13,cursor:"pointer",color:"#e07070",fontFamily:"'Noto Serif JP',serif",marginTop:8}}>
+                  🗑️ 写真を削除する
+                </button>}
+              </div>
+
+              {/* 絵文字アイコン選択 */}
+              <div>
+                <div style={{fontSize:12,color:"#8b4060",marginBottom:8,fontFamily:"'Noto Serif JP',serif"}}>または絵文字を選ぶ</div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {AVATARS.map(a=><button key={a} onClick={()=>{const u={...user,avatar:a};lsSet(KEY_USER,u);setUser(u);showToast(`絵文字アイコンを${a}に設定しました！`);}}
+                    style={{fontSize:20,width:38,height:38,
+                      border:user.avatar===a?"2.5px solid #e8728a":"1.5px solid #e8b4c4",
+                      borderRadius:10,
+                      background:user.avatar===a?"#fce4ec":"#fff",
+                      cursor:"pointer",transition:"all .15s",
+                      transform:user.avatar===a?"scale(1.18)":"scale(1)"}}>
+                    {a}
+                  </button>)}
+                </div>
+              </div>
+            </div>
+            <div style={{display:"flex"}}>
+              {[{label:"投稿",val:myPosts.length},{label:"もらった共感",val:myPosts.reduce((s,p)=>s+p.likes,0)},{label:"保存",val:savedPosts.length}].map((s,i)=><div key={s.label} style={{flex:1,textAlign:"center",borderRight:i<2?"1px solid #f0d8e0":"none"}}><div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:24,color:"#c85a8e"}}>{s.val}</div><div style={{fontSize:11,color:"#b08090",fontFamily:"'Noto Serif JP',serif"}}>{s.label}</div></div>)}
+            </div>
+          </div>
+
+          <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:14}}>
+            <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:18,color:"#6b1a3a"}}>🌸 わたしの予祝</div>
+            <div style={{fontSize:12,color:"#b08090",fontFamily:"'Noto Serif JP',serif"}}>{myPosts.length}件</div>
+          </div>
+          {myPosts.length===0?<EmptyState msg="まだ投稿がありません" sub="最初の予祝を書いてみましょう" onWrite={()=>setView("write")}/>
+          :<div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:20}}>{myPosts.map((p,i)=><PostCard key={p.id} post={p} index={i} liked={liked.has(p.id)} bookmarked={bookmarks.has(p.id)} onOpen={()=>{setSelected(p);setView("detail");setReplies([]);loadReplies(p);}} onLike={()=>handleLike(p.id)} onBookmark={()=>handleBookmark(p.id)} isOwner={true} onEdit={handleEditStart} onDelete={setDeleteTarget} onShowLikers={openLikers} onComment={(post)=>{setSelected(post);setView("detail");setReplies([]);loadReplies(post);}}/>)}</div>}
+
+          <div style={{textAlign:"center",marginTop:8}}>
+          <div style={{textAlign:"center",marginTop:8,display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
+            <button onClick={()=>{lsSet(KEY_USER,null);setUser(null);setOnboard({name:"",avatar:"🌸",avatarImg:""});setView("onboard");}} style={{background:"transparent",border:"none",color:"#c0a0b0",fontSize:13,fontFamily:"'Noto Serif JP',serif",cursor:"pointer"}}>
+              ✏️ ニックネームを変更する
+            </button>
+            <button onClick={()=>{lsSet(KEY_USER,null);setUser(null);setOnboard({name:"",avatar:"🌸",avatarImg:""});setView("feed");showToast("ログアウトしました");}} style={{background:"transparent",border:"1.5px solid #f0b4b4",borderRadius:50,padding:"10px 28px",color:"#e07070",fontSize:14,fontFamily:"'Noto Serif JP',serif",cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+              🚪 ログアウト
+            </button>
+          </div>
+          </div>
+        </div>}
+        {/* ABOUT */}
+        {view==="about"&&<div style={{animation:"fadeUp .35s ease"}}>
+          <div style={{background:"#fff",borderRadius:24,padding:"34px 22px",boxShadow:"0 8px 40px rgba(200,100,140,.11)",border:"1px solid rgba(232,180,196,.35)"}}>
+            <div style={{textAlign:"center",marginBottom:28}}>
+              <div style={{fontSize:48,marginBottom:12}}>🌸</div>
+              <h2 style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:22,color:"#6b1a3a",margin:0}}>予祝（よしゅく）とは？</h2>
+            </div>
+            {[{icon:"🎉",t:"先に祝ってしまう",b:"予祝とは「予め祝う」こと。夢や目標がまだ叶っていなくても、すでに叶ったとして先に喜び祝う、日本古来の風習です。"},{icon:"🌱",t:"引き寄せの力",b:"「できました！」と完了形で書くことで、脳がその体験をリアルに感じ、無意識に行動や思考がその方向へ向かっていきます。"},{icon:"👩‍👧‍👦",t:"仲間と共有する",b:"予祝をコミュニティで共有することで、互いの夢を応援し合い、喜びのエネルギーが循環します。"},{icon:"✍️",t:"書き方のコツ",b:"「〜したい」ではなく「〜できました！」と書きます。感情を込めて、できるだけ具体的に。未来の自分になりきって。"}].map(s=><div key={s.t} style={{marginBottom:20,display:"flex",gap:14}}><div style={{fontSize:24,flexShrink:0,marginTop:2}}>{s.icon}</div><div><div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:700,fontSize:15,color:"#6b1a3a",marginBottom:5}}>{s.t}</div><div style={{fontSize:13,color:"#5a3040",lineHeight:1.85,fontFamily:"'Noto Serif JP',serif"}}>{s.b}</div></div></div>)}
+            <div style={{textAlign:"center",marginTop:28}}>
+              <button className="btn-p" onClick={()=>setView("write")} style={{padding:"13px 32px",fontSize:15}}>✨ さっそく書いてみる</button>
+            </div>
+          </div>
+        </div>}
+
+        {/* ══ ADMIN PAGE ══ */}
+        {view==="admin"&&<div style={{animation:"fadeUp .35s ease"}}>
+
+          {/* 未ログイン：パスワード入力 */}
+          {!isAdmin&&<div style={{background:"#fff",borderRadius:24,padding:"36px 24px",boxShadow:"0 8px 40px rgba(200,100,140,.11)",border:"1px solid rgba(232,180,196,.35)",maxWidth:400,margin:"0 auto",textAlign:"center"}}>
+            <div style={{fontSize:44,marginBottom:14}}>🔑</div>
+            <h2 style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:20,color:"#6b1a3a",marginBottom:8}}>管理者ページ</h2>
+            <p style={{fontSize:13,color:"#9a5070",fontFamily:"'Noto Serif JP',serif",marginBottom:24,lineHeight:1.7}}>管理者パスワードを入力してください</p>
+            <input className={`inp ${adminPwError?"inp-err":"inp-ok"}`}
+              type="password" value={adminPwInput}
+              onChange={e=>{setAdminPwInput(e.target.value);setAdminPwError(false);}}
+              onKeyDown={e=>e.key==="Enter"&&handleAdminLogin()}
+              placeholder="パスワード"
+              style={{marginBottom:12,border:adminPwError?"2px solid #e8728a":"1.5px solid #e8b4c4",textAlign:"center",letterSpacing:".15em"}}/>
+            {adminPwError&&<div style={{color:"#e8728a",fontSize:12,marginBottom:10,fontFamily:"'Noto Serif JP',serif"}}>パスワードが違います</div>}
+            <button className="btn-p" onClick={handleAdminLogin} style={{width:"100%",padding:"14px",fontSize:15}}>ログイン</button>
+          </div>}
+
+          {/* ログイン済み：管理画面 */}
+          {isAdmin&&<div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+              <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:20,color:"#6b1a3a"}}>⚙️ 管理者メニュー</div>
+              <button onClick={()=>{setIsAdmin(false);setView("feed");}} style={{background:"transparent",border:"1.5px solid #e8b4c4",borderRadius:50,padding:"6px 14px",fontSize:12,cursor:"pointer",color:"#c06080",fontFamily:"'Noto Serif JP',serif"}}>ログアウト</button>
+            </div>
+
+            {/* カテゴリー管理カード */}
+            <div style={{background:"#fff",borderRadius:22,padding:"24px 20px",boxShadow:"0 4px 28px rgba(200,100,140,.1)",border:"1px solid rgba(232,180,196,.35)",marginBottom:16}}>
+              <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:17,color:"#6b1a3a",marginBottom:4}}>📂 カテゴリー管理</div>
+              <div style={{fontSize:12,color:"#9a5070",fontFamily:"'Noto Serif JP',serif",marginBottom:18,lineHeight:1.6}}>カテゴリーの追加・削除・並び替えができます。変更はリアルタイムで全ユーザーに反映されます。</div>
+
+              {/* 現在のカテゴリー一覧 */}
+              <div style={{marginBottom:18}}>
+                {categories.map((cat,i)=><div key={cat} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"#fdf8fa",borderRadius:12,marginBottom:8,border:"1px solid rgba(232,180,196,.25)"}}>
+                  <span style={{flex:1,fontFamily:"'Noto Serif JP',serif",fontSize:14,color:"#3a1520"}}>{cat}</span>
+                  <div style={{display:"flex",gap:4}}>
+                    <button onClick={()=>handleCatUp(i)} disabled={i===0} style={{background:"transparent",border:"1px solid #e8b4c4",borderRadius:8,padding:"4px 8px",fontSize:12,cursor:i===0?"default":"pointer",color:i===0?"#d4c0c8":"#c06080",opacity:i===0?0.4:1}}>↑</button>
+                    <button onClick={()=>handleCatDown(i)} disabled={i===categories.length-1} style={{background:"transparent",border:"1px solid #e8b4c4",borderRadius:8,padding:"4px 8px",fontSize:12,cursor:i===categories.length-1?"default":"pointer",color:i===categories.length-1?"#d4c0c8":"#c06080",opacity:i===categories.length-1?0.4:1}}>↓</button>
+                    <button onClick={()=>handleCatDelete(cat)} style={{background:"transparent",border:"1px solid #f0b4b4",borderRadius:8,padding:"4px 8px",fontSize:12,cursor:"pointer",color:"#e07070"}}>🗑️</button>
+                  </div>
+                </div>)}
+              </div>
+
+              {/* 新規追加 */}
+              <div style={{borderTop:"1px solid #f0d8e0",paddingTop:16,marginBottom:12}}>
+                <div style={{fontSize:13,color:"#8b4060",marginBottom:8,fontFamily:"'Noto Serif JP',serif"}}>新しいカテゴリーを追加</div>
+                <div style={{display:"flex",gap:8}}>
+                  <input className="inp inp-ok" value={catInput} onChange={e=>setCatInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleCatAdd()} placeholder="例：趣味・遊び" style={{flex:1,border:"1.5px solid #e8b4c4"}}/>
+                  <button className="btn-p" onClick={handleCatAdd} disabled={!catInput.trim()||categories.includes(catInput.trim())} style={{padding:"12px 18px",fontSize:14,whiteSpace:"nowrap"}}>追加</button>
+                </div>
+                {catInput.trim()&&categories.includes(catInput.trim())&&<div style={{fontSize:12,color:"#e8728a",marginTop:6,fontFamily:"'Noto Serif JP',serif"}}>すでに同じカテゴリーがあります</div>}
+              </div>
+
+              {/* リセット */}
+              <div style={{textAlign:"right"}}>
+                <button onClick={handleCatReset} style={{background:"transparent",border:"none",fontSize:12,color:"#c0a0b0",cursor:"pointer",fontFamily:"'Noto Serif JP',serif",textDecoration:"underline"}}>デフォルトに戻す</button>
+              </div>
+            </div>
+
+            {/* パスワード変更カード */}
+            <div style={{background:"#fff",borderRadius:22,padding:"24px 20px",boxShadow:"0 4px 28px rgba(200,100,140,.1)",border:"1px solid rgba(232,180,196,.35)",marginBottom:16}}>
+              <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:17,color:"#6b1a3a",marginBottom:4}}>🔑 管理者パスワード変更</div>
+              <div style={{fontSize:12,color:"#9a5070",fontFamily:"'Noto Serif JP',serif",marginBottom:18,lineHeight:1.6}}>
+                新しいパスワードを設定します。このデバイスに保存されます。
+              </div>
+
+              <Field label="新しいパスワード（4文字以上）">
+                <input className="inp inp-ok"
+                  type="password" value={newPw}
+                  onChange={e=>{setNewPw(e.target.value);setPwChangeError("");}}
+                  placeholder="新しいパスワードを入力"
+                  style={{border:pwChangeError?"2px solid #e8728a":"1.5px solid #e8b4c4",letterSpacing:".1em"}}/>
+              </Field>
+
+              <Field label="新しいパスワード（確認）">
+                <input className="inp inp-ok"
+                  type="password" value={newPwConfirm}
+                  onChange={e=>{setNewPwConfirm(e.target.value);setPwChangeError("");}}
+                  onKeyDown={e=>e.key==="Enter"&&handlePwChange()}
+                  placeholder="もう一度入力"
+                  style={{border:pwChangeError?"2px solid #e8728a":"1.5px solid #e8b4c4",letterSpacing:".1em"}}/>
+              </Field>
+
+              {pwChangeError&&<div style={{color:"#e8728a",fontSize:12,marginBottom:10,fontFamily:"'Noto Serif JP',serif"}}>{pwChangeError}</div>}
+              {pwChangeSuccess&&<div style={{color:"#4caf84",fontSize:12,marginBottom:10,fontFamily:"'Noto Serif JP',serif"}}>✅ パスワードを変更しました！</div>}
+
+              <div style={{display:"flex",justifyContent:"flex-end"}}>
+                <button className="btn-p" onClick={handlePwChange}
+                  disabled={!newPw||!newPwConfirm}
+                  style={{padding:"11px 24px",fontSize:14}}>
+                  🔑 変更する
+                </button>
+              </div>
+
+              <div style={{marginTop:14,padding:"10px 14px",background:"#fff8f0",borderRadius:10,border:"1px solid #f0d8a0"}}>
+                <div style={{fontSize:11,color:"#8a6020",fontFamily:"'Noto Serif JP',serif",lineHeight:1.7}}>
+                  ⚠️ 現在のパスワード：<strong style={{letterSpacing:".1em"}}>{adminPassword}</strong><br/>
+                  パスワードを忘れた場合はHTMLファイルの <code>DEFAULT_ADMIN_PASSWORD</code> を確認してください。
+                </div>
+              </div>
+            </div>
+
+            {/* 統計カード */}
+            <div style={{background:"#fff",borderRadius:22,padding:"24px 20px",boxShadow:"0 4px 28px rgba(200,100,140,.1)",border:"1px solid rgba(232,180,196,.35)"}}>
+              <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:17,color:"#6b1a3a",marginBottom:16}}>📊 コミュニティ統計</div>
+              <div style={{display:"flex",gap:0}}>
+                {[{label:"総投稿数",val:posts.length},{label:"総共感数",val:posts.reduce((s,p)=>s+p.likes,0)},{label:"カテゴリー数",val:categories.length}].map((s,i)=><div key={s.label} style={{flex:1,textAlign:"center",borderRight:i<2?"1px solid #f0d8e0":"none"}}>
+                  <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:26,color:"#c85a8e"}}>{s.val}</div>
+                  <div style={{fontSize:11,color:"#b08090",fontFamily:"'Noto Serif JP',serif"}}>{s.label}</div>
+                </div>)}
+              </div>
+            </div>
+          </div>}
+        </div>}
+      </main>
+
+      {/* ④ 返信モーダル */}}
+      {replyTarget&&<ModalBg onClose={()=>setReplyTarget(null)}>
+        <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:18,color:"#6b1a3a",marginBottom:4,textAlign:"center"}}>💬 返信・コメント</div>
+        <div style={{fontSize:13,color:"#9a5070",textAlign:"center",marginBottom:20,fontFamily:"'Noto Serif JP',serif"}}>{replyTarget.author}さんの予祝へ</div>
+
+        {/* 既存返信一覧 */}
+        <div style={{maxHeight:280,overflowY:"auto",marginBottom:16}}>
+          {replies.length===0?<div style={{textAlign:"center",padding:"24px 0",color:"#c0a0b0",fontFamily:"'Noto Serif JP',serif",fontSize:13}}>まだ返信がありません<br/>最初のコメントを書いてみましょう🌸</div>
+          :replies.map(r=><div key={r.id} style={{background:"#fdf8fa",borderRadius:14,padding:"12px 14px",marginBottom:10,border:"1px solid rgba(232,180,196,.2)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <div style={{display:"flex",alignItems:"center",gap:7}}>
+                <Avatar src={r.avatarImg} emoji={r.avatar} size={28}/>
+                <div>
+                  <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:700,fontSize:13,color:"#6b1a3a"}}>{r.author}</div>
+                  <div style={{fontSize:10,color:"#b08090",fontFamily:"'Noto Serif JP',serif"}}>{fmtDate(r.date)}</div>
+                </div>
+              </div>
+              {user?.name===r.author&&<div style={{display:"flex",gap:5}}>
+                <button onClick={()=>{setEditReplyTarget(r);setEditReplyText(r.message);}} style={{background:"transparent",border:"1px solid #e8b4c4",borderRadius:20,padding:"2px 8px",fontSize:11,cursor:"pointer",color:"#c06080"}}>✏️</button>
+                <button onClick={()=>handleReplyDelete(r)} style={{background:"transparent",border:"1px solid #f0b4b4",borderRadius:20,padding:"2px 8px",fontSize:11,cursor:"pointer",color:"#e07070"}}>🗑️</button>
+              </div>}
+            </div>
+            {editReplyTarget?.id===r.id
+              ?<div><textarea className="inp inp-ok" value={editReplyText} onChange={e=>setEditReplyText(e.target.value)} rows={2} style={{border:"1.5px solid #e8b4c4",resize:"none",marginBottom:8,lineHeight:1.7}}/><div style={{display:"flex",gap:6,justifyContent:"flex-end"}}><button className="btn-s" onClick={()=>setEditReplyTarget(null)} style={{padding:"6px 14px",fontSize:12}}>キャンセル</button><button className="btn-p" onClick={handleReplyEditSave} style={{padding:"6px 14px",fontSize:12}}>保存</button></div></div>
+              :<div>
+                {r.message&&<p style={{fontSize:13,color:"#3a1520",lineHeight:1.75,margin:"0 0 6px",fontFamily:"'Noto Serif JP',serif",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{r.message}</p>}
+                {r.image&&<img src={r.image} style={{maxWidth:"100%",maxHeight:200,borderRadius:10,marginBottom:6,border:"1px solid #f0d8e0",display:"block",cursor:"pointer"}} onClick={()=>setLightboxImg(r.image)}/>}
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <button onClick={()=>handleReplyLike(r,replyTarget||selected)} disabled={!user} style={{
+                    background:replyLiked.has(r.id)?"linear-gradient(135deg,#fce4ec,#f8bbd9)":"transparent",
+                    border:replyLiked.has(r.id)?"none":"1px solid #e8b4c4",
+                    borderRadius:50,padding:"3px 12px",fontSize:12,cursor:"pointer",
+                    color:"#c05070",display:"inline-flex",alignItems:"center",gap:4,
+                    fontFamily:"'Noto Serif JP',serif",transition:"all .2s"
+                  }}>{replyLiked.has(r.id)?"🩷":"🤍"} {r.likes||0}</button>
+                  {Object.keys(r.likedBy||{}).length>0&&
+                    <button onClick={()=>setReplyLikersTarget(r)} style={{
+                      background:"transparent",border:"none",fontSize:12,cursor:"pointer",
+                      color:"#c0a0b8",fontFamily:"'Noto Serif JP',serif",
+                      display:"inline-flex",alignItems:"center",gap:3
+                    }}>👥 {Object.keys(r.likedBy||{}).length}人</button>
+                  }
+                </div>
+              </div>
+            }
+          </div>)}
+        </div>
+
+        {/* 返信入力 */}
+        <div style={{borderTop:"1px solid #f0d8e0",paddingTop:14}}>
+          <textarea className="inp inp-ok" value={replyText} onChange={e=>setReplyText(e.target.value)} rows={3} placeholder="コメントを書く…" style={{border:"1.5px solid #e8b4c4",resize:"none",lineHeight:1.75,marginBottom:8}}/>
+          {replyImage&&<div style={{position:"relative",marginBottom:8,display:"inline-block"}}>
+            <img src={replyImage} style={{maxWidth:"100%",maxHeight:140,borderRadius:10,border:"1px solid #e8b4c4",display:"block"}}/>
+            <button onClick={()=>setReplyImage(null)} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.5)",border:"none",borderRadius:"50%",width:22,height:22,cursor:"pointer",color:"#fff",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          </div>}
+          <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center"}}>
+            {user&&<button onClick={()=>replyImgRef.current?.click()} style={{background:"transparent",border:"1.5px solid #e8d4f0",borderRadius:50,padding:"8px 14px",fontSize:13,cursor:"pointer",color:"#9060b0",fontFamily:"'Noto Serif JP',serif",display:"flex",alignItems:"center",gap:5}}>🖼️ 画像</button>}
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn-s" onClick={()=>setReplyTarget(null)} style={{padding:"10px 18px",fontSize:14}}>閉じる</button>
+              <button className="btn-p" onClick={handleReplySubmit} disabled={replySaving||(!replyText.trim()&&!replyImage)} style={{padding:"10px 22px",fontSize:14}}>{replySaving?"送信中…":"💬 送信"}</button>
+            </div>
+          </div>
+        </div>
+      </ModalBg>}
+
+      {/* ⑤ 共感した人モーダル */}
+      {likersPost&&<ModalBg onClose={()=>{setLikersPost(null);setLikersData({});}}>
+        <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:18,color:"#6b1a3a",marginBottom:4,textAlign:"center"}}>🩷 共感した人</div>
+        <div style={{fontSize:13,color:"#9a5070",textAlign:"center",marginBottom:20,fontFamily:"'Noto Serif JP',serif"}}>{Object.keys(likersData).length}人が共感しています</div>
+        {Object.keys(likersData).length===0
+          ?<div style={{textAlign:"center",padding:"24px 0",color:"#c0a0b0",fontFamily:"'Noto Serif JP',serif",fontSize:13}}>まだ共感した人がいません<br/>最初に🩷を押してみましょう🌸</div>
+          :<div style={{display:"flex",flexWrap:"wrap",gap:10,justifyContent:"center",maxHeight:300,overflowY:"auto"}}>
+            {Object.entries(likersData).map(([key,val])=><div key={key} style={{display:"flex",alignItems:"center",gap:6,background:"linear-gradient(135deg,#fce4ec,#f8bbd9)",borderRadius:50,padding:"10px 18px",boxShadow:"0 2px 8px rgba(200,90,140,.1)"}}>
+              <span style={{fontSize:18}}>🩷</span>
+              <span style={{fontFamily:"'Shippori Mincho',serif",fontWeight:700,fontSize:15,color:"#6b1a3a"}}>{typeof val==="string"?val:key}</span>
+            </div>)}
+          </div>
+        }
+        <div style={{textAlign:"center",marginTop:20}}>
+          <button className="btn-s" onClick={()=>{setLikersPost(null);setLikersData({});}} style={{padding:"10px 24px",fontSize:14}}>閉じる</button>
+        </div>
+      </ModalBg>}
+
+      {/* 編集モーダル */}
+      {editTarget&&<ModalBg onClose={()=>setEditTarget(null)}>
+        <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:18,color:"#6b1a3a",marginBottom:20,textAlign:"center"}}>✏️ 予祝を編集する</div>
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:13,color:"#8b4060",marginBottom:8,fontFamily:"'Noto Serif JP',serif"}}>お花</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{FLOWERS.map(f=><button key={f} onClick={()=>setEditForm(p=>({...p,flower:f}))} style={{fontSize:19,width:36,height:36,border:editForm.flower===f?"2.5px solid #e8728a":"1.5px solid #e8b4c4",borderRadius:10,background:editForm.flower===f?"#fce4ec":"#fff",cursor:"pointer",transition:"all .15s",transform:editForm.flower===f?"scale(1.15)":"scale(1)"}}>{f}</button>)}</div>
+        </div>
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:13,color:"#8b4060",marginBottom:7,fontFamily:"'Noto Serif JP',serif"}}>カテゴリー</div>
+          <select className="inp inp-ok" style={{border:"1.5px solid #e8b4c4",appearance:"none"}} value={editForm.category} onChange={e=>setEditForm(p=>({...p,category:e.target.value}))}>{categories.map(c=><option key={c}>{c}</option>)}</select>
+        </div>
+        <div style={{marginBottom:22}}>
+          <div style={{fontSize:13,color:"#8b4060",marginBottom:7,fontFamily:"'Noto Serif JP',serif"}}>メッセージ（{editForm.message.length}文字）</div>
+          <textarea className="inp inp-ok" value={editForm.message} onChange={e=>setEditForm(p=>({...p,message:e.target.value}))} rows={5} style={{border:"1.5px solid #e8b4c4",resize:"vertical",lineHeight:1.85}}/>
+        </div>
+        <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+          <button className="btn-s" onClick={()=>setEditTarget(null)} style={{padding:"12px 22px",fontSize:14}}>キャンセル</button>
+          <button className="btn-p" onClick={handleEditSave} disabled={editForm.message.trim().length<10} style={{padding:"12px 28px",fontSize:14}}>💾 保存する</button>
+        </div>
+      </ModalBg>}
+
+      {/* 削除確認モーダル */}
+      {deleteTarget&&<ModalBg onClose={()=>setDeleteTarget(null)}>
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:44,marginBottom:14}}>🗑️</div>
+          <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:18,color:"#6b1a3a",marginBottom:10}}>投稿を削除しますか？</div>
+          <div style={{fontSize:13,color:"#9a5070",fontFamily:"'Noto Serif JP',serif",lineHeight:1.75,marginBottom:24}}>この操作は取り消せません。<br/>返信も一緒に削除されます。</div>
+          <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+            <button className="btn-s" onClick={()=>setDeleteTarget(null)} style={{padding:"12px 22px",fontSize:14}}>キャンセル</button>
+            <button onClick={handleDeleteConfirm} style={{background:"linear-gradient(135deg,#e87272,#c85a5a)",color:"#fff",border:"none",borderRadius:50,padding:"12px 28px",fontSize:14,cursor:"pointer",fontFamily:"'Noto Serif JP',serif",boxShadow:"0 6px 20px rgba(200,80,80,.35)"}}>削除する</button>
+          </div>
+        </div>
+      </ModalBg>}
+
+      {/* 画像拡大モーダル（Lightbox） */}
+      {lightboxImg&&<div
+        onClick={()=>setLightboxImg(null)}
+        style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,.88)",
+          display:"flex",alignItems:"center",justifyContent:"center",padding:16,cursor:"zoom-out"}}>
+        <div style={{position:"relative",maxWidth:"100%",maxHeight:"100%"}}>
+          <img src={lightboxImg}
+            style={{maxWidth:"min(90vw,700px)",maxHeight:"85vh",borderRadius:12,
+              objectFit:"contain",boxShadow:"0 8px 40px rgba(0,0,0,.5)",display:"block"}}
+            onClick={e=>e.stopPropagation()}
+          />
+          <button onClick={()=>setLightboxImg(null)} style={{
+            position:"absolute",top:-12,right:-12,
+            background:"rgba(255,255,255,.9)",border:"none",borderRadius:"50%",
+            width:36,height:36,fontSize:18,cursor:"pointer",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            boxShadow:"0 2px 8px rgba(0,0,0,.3)"
+          }}>✕</button>
+        </div>
+      </div>}
+
+      {/* コメント共感した人モーダル */}
+      {replyLikersTarget&&<ModalBg onClose={()=>setReplyLikersTarget(null)}>
+        <div style={{fontFamily:"'Shippori Mincho',serif",fontWeight:800,fontSize:17,color:"#6b1a3a",marginBottom:4,textAlign:"center"}}>🩷 共感した人</div>
+        <div style={{fontSize:12,color:"#9a5070",textAlign:"center",marginBottom:16,fontFamily:"'Noto Serif JP',serif",lineHeight:1.6}}>
+          「{replyLikersTarget.message.slice(0,20)}{replyLikersTarget.message.length>20?"…":""}」
+        </div>
+        {Object.keys(replyLikersTarget.likedBy||{}).length===0
+          ?<div style={{textAlign:"center",padding:"20px 0",color:"#c0a0b0",fontFamily:"'Noto Serif JP',serif",fontSize:13}}>まだ共感した人がいません🌸</div>
+          :<div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",maxHeight:260,overflowY:"auto"}}>
+            {Object.entries(replyLikersTarget.likedBy||{}).map(([key,val])=>(
+              <div key={key} style={{display:"flex",alignItems:"center",gap:6,background:"linear-gradient(135deg,#fce4ec,#f8bbd9)",borderRadius:50,padding:"8px 16px"}}>
+                <span style={{fontSize:15}}>🩷</span>
+                <span style={{fontFamily:"'Shippori Mincho',serif",fontWeight:700,fontSize:14,color:"#6b1a3a"}}>{typeof val==="string"?val:key}</span>
+              </div>
+            ))}
+          </div>
+        }
+        <div style={{textAlign:"center",marginTop:18}}>
+          <button className="btn-s" onClick={()=>setReplyLikersTarget(null)} style={{padding:"10px 24px",fontSize:14}}>閉じる</button>
+        </div>
+      </ModalBg>}
+
+      {/* ボトムナビ */}
+      <nav style={{position:"fixed",bottom:0,left:0,right:0,zIndex:100,background:"rgba(255,248,249,.95)",backdropFilter:"blur(20px)",borderTop:"1px solid rgba(232,180,196,.35)",paddingTop:8,paddingBottom:"max(12px,env(safe-area-inset-bottom))"}}>
+        <div style={{maxWidth:680,margin:"0 auto",display:"flex",justifyContent:"space-around",alignItems:"center"}}>
+          {[{id:"feed",icon:"🏠",label:"ホーム"},{id:"write",icon:"✨",label:"書く"},{id:"bookmarks",icon:"📌",label:"保存"},{id:"mypage",icon:user?.avatarImg?"img":user?.avatar||"👤",label:"マイページ"},{id:"about",icon:"💡",label:"予祝とは"},{id:"admin",icon:"⚙️",label:"管理者"}].map(n=><div key={n.id} className="nav-it" onClick={()=>setView(n.id)} style={{color:view===n.id?"#c85a8e":"#c0a0b0",position:"relative"}}>
+            {n.id==="mypage"&&user?.avatarImg
+              ?<img src={user.avatarImg} style={{width:22,height:22,borderRadius:"50%",objectFit:"cover"}}/>
+              :<span style={{fontSize:20}}>{n.icon}</span>}
+            <span style={{fontSize:10,letterSpacing:".03em",fontFamily:"'Noto Serif JP',serif",fontWeight:view===n.id?600:400}}>{n.label}</span>
+            {n.id==="feed"&&newBadge&&<div style={{position:"absolute",top:4,right:8,width:8,height:8,borderRadius:"50%",background:"#ff6b6b",animation:"pulse 1s ease infinite"}}/>}
+          </div>)}
+        </div>
+      </nav>
+    </>}
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
 </html>
