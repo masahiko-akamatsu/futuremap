@@ -4,9 +4,9 @@ import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyC64BmjAX5V8ZGnU-kLOQpRzrS98RoRE-8",
-  authDomain: "yosyukupro.firebaseapp.com",
-  projectId: "yosyukupro",
-  storageBucket: "yosyukupro.firebasestorage.app",
+  authDomain: "futuremap-41fcb.firebaseapp.com",
+  projectId: "futuremap-41fcb",
+  storageBucket: "futuremap-41fcb.appspot.com",
   messagingSenderId: "824661488718",
   appId: "1:824661488718:web:f4951ee0e7c99b2e7a3f1f"
 };
