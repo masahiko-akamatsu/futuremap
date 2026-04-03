@@ -12,28 +12,62 @@ import { auth, db } from './firebase';
 import * as XLSX from 'xlsx';
 import './App.css';
 
-const HORIZONS = [
-  { key: 'y1',  label: '1年後',  color: '#4ade80', icon: '🌱' },
-  { key: 'y3',  label: '3年後',  color: '#60a5fa', icon: '🌿' },
-  { key: 'y10', label: '10年後', color: '#f472b6', icon: '🌳' },
+const CATEGORIES = [
+  { key: 'home',     label: '居住環境',        icon: '🏠' },
+  { key: 'study',    label: '学び',            icon: '📚' },
+  { key: 'hobby',    label: '趣味・余暇・遊び',  icon: '🎯' },
+  { key: 'family',   label: '家族・パートナー',  icon: '👨‍👩‍👧' },
+  { key: 'theme',    label: '人生のテーマ&感情', icon: '✨', wide: true },
+  { key: 'health',   label: '健康',            icon: '💚' },
+  { key: 'relation', label: '人間性・人間関係',  icon: '🤝' },
+  { key: 'work',     label: '仕事・社会貢献',   icon: '💼' },
+  { key: 'money',    label: 'お金・物欲',       icon: '💴' },
 ];
+
+const HORIZONS = [
+  { key: 'y1',  label: '1年後',  sub: '2026年12月31日（58歳）', icon: '🌱' },
+  { key: 'y3',  label: '3年後',  sub: '2028年12月31日（60歳）', icon: '🌿' },
+  { key: 'y10', label: '10年後', sub: '2035年12月31日（67歳）', icon: '🌳' },
+];
+
 const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 const EMOJI_LIST = ['😊','🚀','🌸','⭐','🔥','💪','🎯','🌈','🦋','🌺','🎨','🏆','💡','🌙','🌊'];
+
+const MONTH_CATS = [
+  { key: 'home',     label: '居住環境',        icon: '🏠' },
+  { key: 'study',    label: '学び',            icon: '📚' },
+  { key: 'hobby',    label: '趣味・余暇・遊び',  icon: '🎯' },
+  { key: 'family',   label: '家族・パートナー',  icon: '👨‍👩‍👧' },
+  { key: 'theme',    label: '今月のテーマ&感情', icon: '✨', wide: true },
+  { key: 'health',   label: '健康',            icon: '💚' },
+  { key: 'relation', label: '人間性・人間関係',  icon: '🤝' },
+  { key: 'work',     label: '仕事・社会貢献',   icon: '💼' },
+  { key: 'money',    label: 'お金・物欲',       icon: '💴' },
+];
+
+function emptyCategories() {
+  return Object.fromEntries(CATEGORIES.map(c => [c.key, '']));
+}
+function emptyMonthCategories() {
+  return Object.fromEntries(MONTH_CATS.map(c => [c.key, '']));
+}
+
 const DEFAULT_GOALS = {
-  y1:  { title: '', items: ['','',''] },
-  y3:  { title: '', items: ['','',''] },
-  y10: { title: '', items: ['','',''] },
+  y1:  emptyCategories(),
+  y3:  emptyCategories(),
+  y10: emptyCategories(),
 };
 const DEFAULT_ACTIONS = () =>
-  Object.fromEntries(Array.from({length:12},(_,i)=>[String(i+1),{theme:'',tasks:['','','']}]));
-function deepClone(obj){ return JSON.parse(JSON.stringify(obj)); }
+  Object.fromEntries(Array.from({ length: 12 }, (_, i) => [String(i + 1), emptyMonthCategories()]));
+
+function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState('map');
   const [authMode, setAuthMode] = useState('login');
-  const [profile, setProfile] = useState({ nickname:'', emoji:'😊' });
+  const [profile, setProfile] = useState({ nickname: '', emoji: '😊' });
   const [goals, setGoals] = useState(deepClone(DEFAULT_GOALS));
   const [actions, setActions] = useState(DEFAULT_ACTIONS());
   const [saving, setSaving] = useState(false);
@@ -50,99 +84,152 @@ export default function App() {
 
   async function loadUserData(uid) {
     try {
-      const snap = await getDoc(doc(db,'users',uid));
+      const snap = await getDoc(doc(db, 'users', uid));
       if (snap.exists()) {
         const d = snap.data();
         if (d.profile) setProfile(d.profile);
         if (d.goals)   setGoals(d.goals);
         if (d.actions) setActions(d.actions);
       }
-    } catch(e){ console.error(e); }
+    } catch (e) { console.error(e); }
   }
 
-  const saveAll = useCallback(async (p,g,a) => {
+  const saveAll = useCallback(async (p, g, a) => {
     if (!user) return;
     setSaving(true);
     try {
-      await setDoc(doc(db,'users',user.uid),{
-        profile: p??profile, goals: g??goals, actions: a??actions,
+      await setDoc(doc(db, 'users', user.uid), {
+        profile: p ?? profile, goals: g ?? goals, actions: a ?? actions,
         updatedAt: serverTimestamp()
-      },{merge:true});
+      }, { merge: true });
       showToast('保存しました ✓');
-    } catch(e){ showToast('保存エラー: '+e.message); }
+    } catch (e) { showToast('保存エラー: ' + e.message); }
     finally { setSaving(false); }
-  },[user,profile,goals,actions]);
+  }, [user, profile, goals, actions]);
 
-  function showToast(msg){ setToast(msg); setTimeout(()=>setToast(''),2500); }
+  function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 2500); }
 
   async function handleAuth(e) {
     e.preventDefault();
     const email = e.target.email.value.trim();
     const password = e.target.password.value;
     try {
-      if (authMode==='register') {
-        await createUserWithEmailAndPassword(auth,email,password);
+      if (authMode === 'register') {
+        await createUserWithEmailAndPassword(auth, email, password);
         showToast('登録完了！');
       } else {
-        await signInWithEmailAndPassword(auth,email,password);
+        await signInWithEmailAndPassword(auth, email, password);
         showToast('ログインしました');
       }
-    } catch(err){ showToast(err.message); }
+    } catch (err) { showToast(err.message); }
   }
 
   async function handleLogout() {
     await signOut(auth);
     setGoals(deepClone(DEFAULT_GOALS));
     setActions(DEFAULT_ACTIONS());
-    setProfile({nickname:'',emoji:'😊'});
+    setProfile({ nickname: '', emoji: '😊' });
   }
 
   function exportExcel() {
     const wb = XLSX.utils.book_new();
-    const mapRows = [['期間','目標タイトル','項目1','項目2','項目3']];
-    HORIZONS.forEach(h=>{
-      const g=goals[h.key];
-      mapRows.push([h.label,g.title,g.items[0]||'',g.items[1]||'',g.items[2]||'']);
+    HORIZONS.forEach(h => {
+      const rows = [['カテゴリ', '内容']];
+      CATEGORIES.forEach(c => rows.push([c.label, goals[h.key]?.[c.key] || '']));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), h.label);
     });
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(mapRows),'フューチャーマップ');
-    const actRows = [['月','テーマ','タスク1','タスク2','タスク3']];
-    MONTHS.forEach((m,i)=>{
-      const a=actions[String(i+1)];
-      actRows.push([m,a?.theme||'',a?.tasks?.[0]||'',a?.tasks?.[1]||'',a?.tasks?.[2]||'']);
+    const actRows = [['月', ...MONTH_CATS.map(c => c.label)]];
+    MONTHS.forEach((m, i) => {
+      const a = actions[String(i + 1)] || emptyMonthCategories();
+      actRows.push([m, ...MONTH_CATS.map(c => a[c.key] || '')]);
     });
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(actRows),'アクションプラン');
-    XLSX.writeFile(wb,'futuremap_export.xlsx');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(actRows), '月次アクション');
+    XLSX.writeFile(wb, 'futuremap_export.xlsx');
     showToast('Excelをダウンロードしました');
   }
 
   function importExcel(e) {
-    const file = e.target.files[0]; if(!file) return;
+    const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const wb = XLSX.read(ev.target.result,{type:'binary'});
-        const mapSheet = wb.Sheets['フューチャーマップ'];
-        if (mapSheet) {
-          const rows = XLSX.utils.sheet_to_json(mapSheet,{header:1});
-          const ng = deepClone(DEFAULT_GOALS);
-          rows.slice(1).forEach(row=>{
-            const h = HORIZONS.find(x=>x.label===row[0]);
-            if(h){ ng[h.key].title=row[1]||''; ng[h.key].items=[row[2]||'',row[3]||'',row[4]||'']; }
+        const wb = XLSX.read(ev.target.result, { type: 'binary' });
+        const LABEL_TO_KEY = {
+          '居住環境': 'home', '学び': 'study', '趣味・余暇・遊び': 'hobby',
+          '家族・パートナー': 'family', '人生のテーマ&感情': 'theme',
+          '今月のテーマ&感情': 'theme', 'テーマ&感情': 'theme',
+          '健康': 'health', '人間性・人間関係': 'relation',
+          '仕事・社会貢献': 'work', 'お金・物欲': 'money',
+        };
+        function parseGridSheet(rows) {
+          const result = {};
+          [[2,3],[4,5],[6,7]].forEach(([li, di]) => {
+            if (li >= rows.length) return;
+            const labels = rows[li];
+            const data   = rows[di] || [];
+            [1,2,3].forEach(col => {
+              const label = labels[col];
+              const value = data[col];
+              if (label && LABEL_TO_KEY[label]) {
+                result[LABEL_TO_KEY[label]] = String(value || '');
+              }
+            });
           });
-          setGoals(ng);
+          return result;
         }
-        const actSheet = wb.Sheets['アクションプラン'];
-        if (actSheet) {
-          const rows = XLSX.utils.sheet_to_json(actSheet,{header:1});
-          const na = DEFAULT_ACTIONS();
-          rows.slice(1).forEach(row=>{
+        function parseAppSheet(rows) {
+          const result = {};
+          rows.slice(1).forEach(row => {
+            const key = LABEL_TO_KEY[row[0]];
+            if (key) result[key] = String(row[1] || '');
+          });
+          return result;
+        }
+        const ng = deepClone(DEFAULT_GOALS);
+        const ORIG_SHEET = {
+          y1:  ['フューチャーマップ(1年後2026年の外側) ', 'フューチャーマップ(1年後2026年の外側)'],
+          y3:  ['フューチャーマップ(3年後2028年の外側)'],
+          y10: ['フューチャーマップ(Life Goals10years)'],
+        };
+        HORIZONS.forEach(h => {
+          if (wb.Sheets[h.label]) {
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[h.label], { header: 1 });
+            Object.assign(ng[h.key], parseAppSheet(rows));
+            return;
+          }
+          const candidates = ORIG_SHEET[h.key] || [];
+          for (const name of candidates) {
+            if (wb.Sheets[name]) {
+              const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1 });
+              Object.assign(ng[h.key], parseGridSheet(rows));
+              break;
+            }
+          }
+        });
+        setGoals(ng);
+        const na = DEFAULT_ACTIONS();
+        if (wb.Sheets['月次アクション']) {
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets['月次アクション'], { header: 1 });
+          rows.slice(1).forEach(row => {
             const mi = MONTHS.indexOf(row[0]);
-            if(mi>=0){ const k=String(mi+1); na[k].theme=row[1]||''; na[k].tasks=[row[2]||'',row[3]||'',row[4]||'']; }
+            if (mi >= 0) {
+              const k = String(mi + 1);
+              MONTH_CATS.forEach((c, ci) => { na[k][c.key] = String(row[ci + 1] || ''); });
+            }
           });
-          setActions(na);
         }
-        showToast('Excelを取り込みました'); e.target.value='';
-      } catch(err){ showToast('読み込みエラー: '+err.message); }
+        wb.SheetNames.forEach(name => {
+          const m = name.match(/^(\d+)月アクション$/);
+          if (!m) return;
+          const mi = parseInt(m[1]) - 1;
+          if (mi < 0 || mi > 11) return;
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1 });
+          const data = parseGridSheet(rows);
+          Object.assign(na[String(mi + 1)], data);
+        });
+        setActions(na);
+        showToast('Excelを取り込みました ✓'); e.target.value = '';
+      } catch (err) { showToast('読み込みエラー: ' + err.message); }
     };
     reader.readAsBinaryString(file);
   }
@@ -156,30 +243,30 @@ export default function App() {
       <header className="header">
         <div className="header-left"><span className="logo">🗺️ FutureMap</span></div>
         <nav className="nav">
-          <button className={page==='map'?'nav-btn active':'nav-btn'} onClick={()=>setPage('map')}>マップ</button>
-          <button className={page==='actions'?'nav-btn active':'nav-btn'} onClick={()=>setPage('actions')}>アクション</button>
-          <button className={page==='profile'?'nav-btn active':'nav-btn'} onClick={()=>setPage('profile')}>プロフィール</button>
+          <button className={page === 'map' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPage('map')}>マップ</button>
+          <button className={page === 'actions' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPage('actions')}>月次アクション</button>
+          <button className={page === 'profile' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPage('profile')}>プロフィール</button>
         </nav>
         <div className="header-right">
-          <span className="user-badge">{profile.emoji} {profile.nickname||user.email}</span>
+          <span className="user-badge">{profile.emoji} {profile.nickname || user.email}</span>
           <button className="btn-logout" onClick={handleLogout}>ログアウト</button>
         </div>
       </header>
       <div className="toolbar">
-        <label className="btn-tool">📥 Excelインポート<input type="file" accept=".xlsx,.xls" onChange={importExcel} style={{display:'none'}} /></label>
+        <label className="btn-tool">📥 Excelインポート<input type="file" accept=".xlsx,.xls" onChange={importExcel} style={{ display: 'none' }} /></label>
         <button className="btn-tool" onClick={exportExcel}>📤 Excelエクスポート</button>
-        <button className="btn-save" onClick={()=>saveAll()} disabled={saving}>{saving?'保存中…':'💾 保存'}</button>
+        <button className="btn-save" onClick={() => saveAll()} disabled={saving}>{saving ? '保存中…' : '💾 保存'}</button>
       </div>
       <main className="main">
-        {page==='map'     && <MapPage goals={goals} setGoals={setGoals} />}
-        {page==='actions' && <ActionsPage actions={actions} setActions={setActions} />}
-        {page==='profile' && <ProfilePage profile={profile} setProfile={setProfile} onSave={(p)=>saveAll(p,null,null)} />}
+        {page === 'map'     && <MapPage goals={goals} setGoals={setGoals} />}
+        {page === 'actions' && <ActionsPage actions={actions} setActions={setActions} />}
+        {page === 'profile' && <ProfilePage profile={profile} setProfile={setProfile} onSave={(p) => saveAll(p, null, null)} />}
       </main>
     </div>
   );
 }
 
-function AuthPage({authMode,setAuthMode,onSubmit}) {
+function AuthPage({ authMode, setAuthMode, onSubmit }) {
   return (
     <div className="auth-bg">
       <div className="auth-card">
@@ -189,51 +276,66 @@ function AuthPage({authMode,setAuthMode,onSubmit}) {
         <form onSubmit={onSubmit} className="auth-form">
           <input name="email" type="email" placeholder="メールアドレス" required className="auth-input" />
           <input name="password" type="password" placeholder="パスワード（6文字以上）" required className="auth-input" />
-          <button type="submit" className="auth-submit">{authMode==='login'?'ログイン':'アカウント作成'}</button>
+          <button type="submit" className="auth-submit">{authMode === 'login' ? 'ログイン' : 'アカウント作成'}</button>
         </form>
-        <button className="auth-toggle" onClick={()=>setAuthMode(authMode==='login'?'register':'login')}>
-          {authMode==='login'?'→ 新規登録はこちら':'→ ログインはこちら'}
+        <button className="auth-toggle" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}>
+          {authMode === 'login' ? '→ 新規登録はこちら' : '→ ログインはこちら'}
         </button>
       </div>
     </div>
   );
 }
 
-function MapPage({goals,setGoals}) {
-  function updateGoal(key,field,value){ setGoals(prev=>({...prev,[key]:{...prev[key],[field]:value}})); }
-  function updateItem(key,idx,value){ setGoals(prev=>{ const items=[...prev[key].items]; items[idx]=value; return {...prev,[key]:{...prev[key],items}}; }); }
+function MapPage({ goals, setGoals }) {
+  const [activeHorizon, setActiveHorizon] = useState('y1');
+
+  function updateCat(horizonKey, catKey, value) {
+    setGoals(prev => ({
+      ...prev,
+      [horizonKey]: { ...prev[horizonKey], [catKey]: value }
+    }));
+  }
+
+  const h = HORIZONS.find(x => x.key === activeHorizon);
+  const data = goals[activeHorizon] || emptyCategories();
+
   return (
     <div className="map-page">
       <h2 className="page-title">🗺️ フューチャーマップ</h2>
-      <p className="page-sub">1年後・3年後・10年後の目標を描きましょう</p>
-      <div className="horizons">
-        {HORIZONS.map(h=>(
-          <div className="horizon-card" key={h.key} style={{'--accent':h.color}}>
-            <div className="horizon-header"><span className="horizon-icon">{h.icon}</span><span className="horizon-label">{h.label}</span></div>
-            <input className="horizon-title-input" placeholder={`${h.label}の大目標`} value={goals[h.key].title} onChange={e=>updateGoal(h.key,'title',e.target.value)} />
-            <div className="horizon-items">
-              {goals[h.key].items.map((item,idx)=>(
-                <div className="item-row" key={idx}>
-                  <span className="item-num">{idx+1}</span>
-                  <input className="item-input" placeholder={`目標項目 ${idx+1}`} value={item} onChange={e=>updateItem(h.key,idx,e.target.value)} />
-                </div>
-              ))}
-            </div>
-          </div>
+      <p className="page-sub">1年後・3年後・10年後のビジョンを描きましょう</p>
+
+      <div className="horizon-tabs">
+        {HORIZONS.map(hz => (
+          <button
+            key={hz.key}
+            className={`horizon-tab${activeHorizon === hz.key ? ' active' : ''}`}
+            onClick={() => setActiveHorizon(hz.key)}
+          >
+            <span className="htab-icon">{hz.icon}</span>
+            <span className="htab-label">{hz.label}</span>
+            <span className="htab-sub">{hz.sub}</span>
+          </button>
         ))}
       </div>
-      <div className="map-visual">
-        <h3 className="visual-title">📍 未来へのロードマップ</h3>
-        <div className="timeline">
-          {HORIZONS.map((h,i)=>(
-            <div className="timeline-item" key={h.key}>
-              <div className="timeline-dot" style={{background:h.color}} />
-              {i<HORIZONS.length-1 && <div className="timeline-line" />}
-              <div className="timeline-content">
-                <div className="tl-label" style={{color:h.color}}>{h.label}</div>
-                <div className="tl-main">{goals[h.key].title||'（未設定）'}</div>
-                {goals[h.key].items.filter(Boolean).map((it,j)=><div className="tl-item" key={j}>・{it}</div>)}
+
+      <div className="horizon-panel">
+        <div className="horizon-panel-header">
+          <span>{h.icon}</span>
+          <span className="hp-title">{h.label} — {h.sub}</span>
+        </div>
+        <div className="cat-grid">
+          {CATEGORIES.map(cat => (
+            <div key={cat.key} className={`cat-card${cat.wide ? ' cat-wide' : ''}`}>
+              <div className="cat-label">
+                <span className="cat-icon">{cat.icon}</span>
+                {cat.label}
               </div>
+              <textarea
+                className="cat-textarea"
+                placeholder={`${cat.label}の目標・ビジョンを入力…`}
+                value={data[cat.key] || ''}
+                onChange={e => updateCat(activeHorizon, cat.key, e.target.value)}
+              />
             </div>
           ))}
         </div>
@@ -242,43 +344,73 @@ function MapPage({goals,setGoals}) {
   );
 }
 
-function ActionsPage({actions,setActions}) {
-  const [selectedMonth,setSelectedMonth] = useState(new Date().getMonth()+1);
-  function updateAction(month,field,value){ setActions(prev=>({...prev,[String(month)]:{...prev[String(month)],[field]:value}})); }
-  function updateTask(month,idx,value){ setActions(prev=>{ const tasks=[...(prev[String(month)]?.tasks||['','',''])]; tasks[idx]=value; return {...prev,[String(month)]:{...prev[String(month)],tasks}}; }); }
-  const cur = actions[String(selectedMonth)]||{theme:'',tasks:['','','']};
+function ActionsPage({ actions, setActions }) {
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+
+  function updateCat(month, catKey, value) {
+    setActions(prev => ({
+      ...prev,
+      [String(month)]: { ...prev[String(month)], [catKey]: value }
+    }));
+  }
+
+  const cur = actions[String(selectedMonth)] || emptyMonthCategories();
+
   return (
     <div className="actions-page">
       <h2 className="page-title">📅 月次アクションプラン</h2>
-      <p className="page-sub">月ごとのテーマとタスクを設定しましょう</p>
+      <p className="page-sub">月ごとの9カテゴリを設定しましょう</p>
       <div className="month-grid">
-        {MONTHS.map((m,i)=>{
-          const a=actions[String(i+1)]; const hasData=a?.theme||a?.tasks?.some(Boolean);
-          return <button key={i} className={`month-btn ${selectedMonth===i+1?'active':''} ${hasData?'has-data':''}`} onClick={()=>setSelectedMonth(i+1)}>{m}</button>;
+        {MONTHS.map((m, i) => {
+          const a = actions[String(i + 1)];
+          const hasData = a && Object.values(a).some(Boolean);
+          return (
+            <button
+              key={i}
+              className={`month-btn${selectedMonth === i + 1 ? ' active' : ''}${hasData ? ' has-data' : ''}`}
+              onClick={() => setSelectedMonth(i + 1)}
+            >{m}</button>
+          );
         })}
       </div>
       <div className="month-editor">
-        <h3 className="month-editor-title">{MONTHS[selectedMonth-1]} のプラン</h3>
-        <label className="field-label">月のテーマ</label>
-        <input className="theme-input" placeholder="例：健康習慣を確立する月" value={cur.theme} onChange={e=>updateAction(selectedMonth,'theme',e.target.value)} />
-        <label className="field-label">タスク</label>
-        {(cur.tasks||['','','']).map((task,idx)=>(
-          <div className="task-row" key={idx}>
-            <span className="task-num">✓</span>
-            <input className="task-input" placeholder={`タスク ${idx+1}`} value={task} onChange={e=>updateTask(selectedMonth,idx,e.target.value)} />
-          </div>
-        ))}
+        <div className="month-editor-header">
+          <span className="month-editor-title">{MONTHS[selectedMonth - 1]}</span>
+          <span className="month-editor-sub">のアクションプラン</span>
+        </div>
+        <div className="cat-grid">
+          {MONTH_CATS.map(cat => (
+            <div key={cat.key} className={`cat-card${cat.wide ? ' cat-wide' : ''}`}>
+              <div className="cat-label">
+                <span className="cat-icon">{cat.icon}</span>
+                {cat.label}
+              </div>
+              <textarea
+                className="cat-textarea"
+                placeholder={`${cat.label}の今月のアクション…`}
+                value={cur[cat.key] || ''}
+                onChange={e => updateCat(selectedMonth, cat.key, e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
       </div>
+
       <div className="year-summary">
         <h3 className="visual-title">📊 年間プラン一覧</h3>
         <div className="summary-grid">
-          {MONTHS.map((m,i)=>{
-            const a=actions[String(i+1)];
+          {MONTHS.map((m, i) => {
+            const a = actions[String(i + 1)];
+            const filled = a ? Object.values(a).filter(Boolean).length : 0;
             return (
-              <div key={i} className={`summary-card ${selectedMonth===i+1?'selected':''}`} onClick={()=>setSelectedMonth(i+1)}>
+              <div
+                key={i}
+                className={`summary-card${selectedMonth === i + 1 ? ' selected' : ''}`}
+                onClick={() => setSelectedMonth(i + 1)}
+              >
                 <div className="summary-month">{m}</div>
-                <div className="summary-theme">{a?.theme||'—'}</div>
-                <div className="summary-tasks">{(a?.tasks||[]).filter(Boolean).length} タスク</div>
+                <div className="summary-theme">{a?.theme || '—'}</div>
+                <div className="summary-tasks">{filled} / 9 入力済</div>
               </div>
             );
           })}
@@ -288,9 +420,9 @@ function ActionsPage({actions,setActions}) {
   );
 }
 
-function ProfilePage({profile,setProfile,onSave}) {
-  const [local,setLocal] = useState({...profile});
-  function handleSave(){ setProfile(local); onSave(local); }
+function ProfilePage({ profile, setProfile, onSave }) {
+  const [local, setLocal] = useState({ ...profile });
+  function handleSave() { setProfile(local); onSave(local); }
   return (
     <div className="profile-page">
       <h2 className="page-title">👤 プロフィール</h2>
@@ -298,14 +430,14 @@ function ProfilePage({profile,setProfile,onSave}) {
       <div className="profile-card">
         <div className="profile-preview">
           <span className="profile-emoji-big">{local.emoji}</span>
-          <span className="profile-name-preview">{local.nickname||'ニックネーム未設定'}</span>
+          <span className="profile-name-preview">{local.nickname || 'ニックネーム未設定'}</span>
         </div>
         <label className="field-label">ニックネーム</label>
-        <input className="profile-input" placeholder="例：まさひこ" value={local.nickname} onChange={e=>setLocal(l=>({...l,nickname:e.target.value}))} />
+        <input className="profile-input" placeholder="例：まさひこ" value={local.nickname} onChange={e => setLocal(l => ({ ...l, nickname: e.target.value }))} />
         <label className="field-label">絵文字アイコン</label>
         <div className="emoji-grid">
-          {EMOJI_LIST.map(em=>(
-            <button key={em} className={`emoji-btn ${local.emoji===em?'selected':''}`} onClick={()=>setLocal(l=>({...l,emoji:em}))}>{em}</button>
+          {EMOJI_LIST.map(em => (
+            <button key={em} className={`emoji-btn${local.emoji === em ? ' selected' : ''}`} onClick={() => setLocal(l => ({ ...l, emoji: em }))}>{em}</button>
           ))}
         </div>
         <button className="btn-primary" onClick={handleSave}>プロフィールを保存</button>
