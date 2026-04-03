@@ -2,16 +2,15 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// TODO: FirebaseコンソールのプロジェクトIDを設定してください
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT_ID.appspot.com",
-          messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-            };
+  apiKey: "AIzaSyC64BmjAX5V8ZGnU-kLOQpRzrS98RoRE-8",
+  authDomain: "yosyukupro.firebaseapp.com",
+  projectId: "yosyukupro",
+  storageBucket: "yosyukupro.firebasestorage.app",
+  messagingSenderId: "824661488718",
+  appId: "1:824661488718:web:f4951ee0e7c99b2e7a3f1f"
+};
 
-            const app = initializeApp(firebaseConfig);
-            export const auth = getAuth(app);
-            export const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
