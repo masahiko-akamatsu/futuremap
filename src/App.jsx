@@ -16,11 +16,7 @@ const CATEGORIES = [
   { key: 'work',     label: '仕事・社会貢献',   icon: '💼', colorKey: 'yellow' },
   { key: 'money',    label: 'お金・物欲',       icon: '💴', colorKey: 'blue' },
 ];
-const GRID_LAYOUT = [
-  ['home', 'study', 'hobby'],
-  ['family', 'theme', 'health'],
-  ['relation', 'work', 'money'],
-];
+const GRID_LAYOUT = [['home','study','hobby'],['family','theme','health'],['relation','work','money']];
 const HORIZONS = [
   { key: 'y1',  label: '1年後',  sub: '2026年12月31日（58歳）', icon: '🌱' },
   { key: 'y3',  label: '3年後',  sub: '2028年12月31日（60歳）', icon: '🌿' },
@@ -46,6 +42,7 @@ const COLOR_THEMES = {
   sakura: { name: 'さくらピンク', colors: { yellow:{bg:'#FFF5F8',label:'#5C1A2A',border:'#FFAACC'}, blue:{bg:'#FFF0F5',label:'#5C1A3A',border:'#FF99BB'}, brightyellow:{bg:'#FFECF5',label:'#5C0A30',border:'#FF88BB'}, pink:{bg:'#FFE8F2',label:'#5C0A2A',border:'#FF77AA'}, purple:{bg:'#FFF0FF',label:'#4A0A4A',border:'#FFAAFF'} }, header:'#FFCCE0', headerText:'#5C0A2A', bg:'#FFF5F8' },
   night:  { name: 'ナイトモード', colors: { yellow:{bg:'#2A2A1A',label:'#FFEEAA',border:'#555533'}, blue:{bg:'#1A2A3A',label:'#AADDFF',border:'#335577'}, brightyellow:{bg:'#2A2800',label:'#FFFF88',border:'#555500'}, pink:{bg:'#2A1A1A',label:'#FFAAAA',border:'#553333'}, purple:{bg:'#221A2A',label:'#FFAAFF',border:'#553366'} }, header:'#1A1A0A', headerText:'#EEEEBB', bg:'#121210' },
 };
+
 function emptyCategories(){return Object.fromEntries(CATEGORIES.map(c=>[c.key,'']));}
 function emptyMonthCategories(){return Object.fromEntries(MONTH_CATS.map(c=>[c.key,'']));}
 const DEFAULT_GOALS={y1:emptyCategories(),y3:emptyCategories(),y10:emptyCategories()};
@@ -71,8 +68,82 @@ export default function App(){
   function showToast(msg){setToast(msg);setTimeout(()=>setToast(''),2500);}
   async function handleAuth(e){e.preventDefault();const email=e.target.email.value.trim();const pass=e.target.password.value;try{if(authMode==='register'){await createUserWithEmailAndPassword(auth,email,pass);showToast('登録完了！');}else{await signInWithEmailAndPassword(auth,email,pass);showToast('ログインしました');}}catch(err){showToast(err.message);}}
   async function handleLogout(){await signOut(auth);setGoals(deepClone(DEFAULT_GOALS));setActions(DEFAULT_ACTIONS());setProfile({nickname:'',emoji:'😊'});setTheme('excel');}
-  function exportExcel(){const wb=XLSX.utils.book_new();HORIZONS.forEach(h=>{const rows=[['カテゴリ','内容']];CATEGORIES.forEach(c=>rows.push([c.label,goals[h.key]?.[c.key]||'']));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),h.label);});const ar=[['月',...MONTH_CATS.map(c=>c.label)]];MONTHS.forEach((m,i)=>{const a=actions[String(i+1)]||emptyMonthCategories();ar.push([m,...MONTH_CATS.map(c=>a[c.key]||'')]);});XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ar),'月次アクション');XLSX.writeFile(wb,'futuremap_export.xlsx');showToast('Excelをダウンロードしました');}
+
+  function exportExcel(){
+    const wb=XLSX.utils.book_new();
+    const CELL_STYLES={
+      map:{
+        labelRow:[['FFFFFFCC','FFCCECFF','FFFFFF00'],['FFFFCCCC','FFFFFF00','FFFFFFCC'],['FFFFCCFF','FFFFFFCC','FFCCECFF']],
+        dataRow: [['FFFFFFCC','FFCCECFF','FFFFFF00'],['FFFFCCCC','FFFFFF00','FFFFFFCC'],['FFFFCCFF','FFFFFFCC','FFCCECFF']],
+        labelFg: [[null,null,'FFFF0000'],[null,'FF0000FF',null],['FF0000CC',null,null]],
+        dataFg:  [[null,'FF0000FF','FFFF0000'],['FF0000CC','FF0000CC',null],['FF0000CC',null,null]],
+      },
+      monthly:{
+        labelRow:[['FFFFFFCC','FFCCECFF','FFFFFF00'],['FFFFFFCC','FFFFFF00','FFFFFFCC'],['FFFFCCFF','FFFFFFCC','FFFFFFCC']],
+        dataRow: [['FFFFFFCC','FFFFFFCC','FFFFFF00'],['FFFFFFCC','FFFFFF00','FFFFFFCC'],['FFFFCCFF','FFFFFFCC','FFFFFFCC']],
+        labelFg: [[null,null,'FFFF0000'],[null,'FF0000FF',null],[null,null,null]],
+        dataFg:  [[null,'FF0000FF','FFFF0000'],['FFFF0000','FF0000CC',null],[null,null,null]],
+      },
+    };
+    function applyStyle(ws,addr,bgARGB,fgARGB,bold,wrapText,valign){
+      if(!ws[addr])ws[addr]={t:'s',v:''};
+      ws[addr].s={
+        fill:bgARGB&&bgARGB!=='00000000'?{patternType:'solid',fgColor:{rgb:bgARGB.substring(2)}}:{patternType:'none'},
+        font:{name:'Yu Gothic',sz:18,bold:!!bold,color:fgARGB?{rgb:fgARGB.substring(2)}:{rgb:'000000'}},
+        alignment:{wrapText:!!wrapText,vertical:valign||'center',horizontal:'left'},
+      };
+    }
+    const layout=[['home','study','hobby'],['family','theme','health'],['relation','work','money']];
+    const catLabel={home:'居住環境',study:'学び',hobby:'趣味・余暇・遊び',family:'家族・パートナー',theme:'人生のテーマ&感情',health:'健康',relation:'人間性・人間関係',work:'仕事・社会貢献',money:'お金・物欲'};
+    const titles={y1:'フューチャーマップ(2026年の外側)　　1年後　2026年12月31日（58歳）',y3:'フューチャーマップ(2028年の外側)　　3年後　2028年12月31日（60歳）',y10:'フューチャーマップ(Life Goals/10years)現状の外側　2035年12月31日（67歳）'};
+    const sheetNames={y1:'フューチャーマップ(1年後2026年の外側)',y3:'フューチャーマップ(3年後2028年の外側)',y10:'フューチャーマップ(Life Goals10years)'};
+    const colWidths={y1:55.66,y3:47.5,y10:48.16};
+    HORIZONS.forEach((h,hi)=>{
+      const g=goals[h.key]||emptyCategories();
+      const ws={};ws['!ref']='A1:D8';
+      ws['A1']={t:'s',v:titles[h.key],s:{font:{name:'Yu Gothic',sz:18,bold:true}}};
+      ws['D2']={t:'s',v:new Date().toLocaleDateString('ja-JP'),s:{font:{name:'Yu Gothic',sz:12}}};
+      const cols=['B','C','D'];const st=CELL_STYLES.map;
+      layout.forEach((row,ri)=>{
+        const lr=3+ri*2,dr=4+ri*2;
+        row.forEach((key,ci)=>{
+          const la=`${cols[ci]}${lr}`,da=`${cols[ci]}${dr}`;
+          ws[la]={t:'s',v:catLabel[key]};applyStyle(ws,la,st.labelRow[ri][ci],st.labelFg[ri][ci],true,false,'top');
+          ws[da]={t:'s',v:g[key]||''};applyStyle(ws,da,st.dataRow[ri][ci],st.dataFg[ri][ci],false,true,'center');
+        });
+      });
+      ws['!cols']=[{wch:3.16},{wch:colWidths[h.key]},{wch:13},{wch:13}];
+      ws['!rows']=[{hpt:hi===1?31:23},{hpt:15.75},{hpt:21.75},{hpt:193.5},{hpt:26.25},{hpt:193.5},{hpt:24.75},{hpt:193.5}];
+      XLSX.utils.book_append_sheet(wb,ws,sheetNames[h.key]);
+    });
+    const catLabelM={home:'居住環境',study:'学び',hobby:'趣味・余暇・遊び',family:'家族・パートナー',theme:'今月のテーマ&感情',health:'健康',relation:'人間性・人間関係',work:'仕事・社会貢献',money:'お金・物欲'};
+    const stM=CELL_STYLES.monthly;
+    MONTHS.forEach((m,mi)=>{
+      const a=actions[String(mi+1)];
+      if(!a||!Object.values(a).some(Boolean))return;
+      const mn=mi+1;
+      const ws={};ws['!ref']='A1:D8';
+      ws['A1']={t:'s',v:`フューチャーマップ(今月のアクション　2026年${mn}月)`,s:{font:{name:'Yu Gothic',sz:18,bold:true}}};
+      ws['D2']={t:'s',v:new Date().toLocaleDateString('ja-JP'),s:{font:{name:'Yu Gothic',sz:12}}};
+      const cols=['B','C','D'];
+      layout.forEach((row,ri)=>{
+        const lr=3+ri*2,dr=4+ri*2;
+        row.forEach((key,ci)=>{
+          const la=`${cols[ci]}${lr}`,da=`${cols[ci]}${dr}`;
+          ws[la]={t:'s',v:catLabelM[key]};applyStyle(ws,la,stM.labelRow[ri][ci],stM.labelFg[ri][ci],true,false,'top');
+          ws[da]={t:'s',v:a[key]||''};applyStyle(ws,da,stM.dataRow[ri][ci],stM.dataFg[ri][ci],false,true,'center');
+        });
+      });
+      ws['!cols']=[{wch:3.16},{wch:55.66},{wch:13},{wch:13}];
+      ws['!rows']=[{hpt:23},{hpt:15.75},{hpt:21.75},{hpt:193.5},{hpt:26.25},{hpt:193.5},{hpt:24.75},{hpt:193.5}];
+      XLSX.utils.book_append_sheet(wb,ws,`${mn}月アクション`);
+    });
+    XLSX.writeFile(wb,'futuremap_export.xlsx',{cellStyles:true});
+    showToast('Excelをダウンロードしました');
+  }
+
   function importExcel(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=(ev)=>{try{const wb=XLSX.read(ev.target.result,{type:'binary'});const L={'居住環境':'home','学び':'study','趣味・余暇・遊び':'hobby','家族・パートナー':'family','人生のテーマ&感情':'theme','今月のテーマ&感情':'theme','テーマ&感情':'theme','健康':'health','人間性・人間関係':'relation','仕事・社会貢献':'work','お金・物欲':'money'};function pG(rows){const r={};[[2,3],[4,5],[6,7]].forEach(([li,di])=>{if(li>=rows.length)return;const lb=rows[li],dt=rows[di]||[];[1,2,3].forEach(col=>{const l=lb[col],v=dt[col];if(l&&L[l])r[L[l]]=String(v||'');});});return r;}function pA(rows){const r={};rows.slice(1).forEach(row=>{const k=L[row[0]];if(k)r[k]=String(row[1]||'');});return r;}const ng=deepClone(DEFAULT_GOALS);const OR={y1:['フューチャーマップ(1年後2026年の外側) ','フューチャーマップ(1年後2026年の外側)'],y3:['フューチャーマップ(3年後2028年の外側)'],y10:['フューチャーマップ(Life Goals10years)']};HORIZONS.forEach(h=>{if(wb.Sheets[h.label]){Object.assign(ng[h.key],pA(XLSX.utils.sheet_to_json(wb.Sheets[h.label],{header:1})));return;}for(const n of(OR[h.key]||[])){if(wb.Sheets[n]){Object.assign(ng[h.key],pG(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1})));break;}}});setGoals(ng);const na=DEFAULT_ACTIONS();if(wb.Sheets['月次アクション']){XLSX.utils.sheet_to_json(wb.Sheets['月次アクション'],{header:1}).slice(1).forEach(row=>{const mi=MONTHS.indexOf(row[0]);if(mi>=0){const k=String(mi+1);MONTH_CATS.forEach((c,ci)=>{na[k][c.key]=String(row[ci+1]||'');});}});}wb.SheetNames.forEach(name=>{const m=name.match(/^(\d+)月アクション$/);if(!m)return;const mi=parseInt(m[1])-1;if(mi<0||mi>11)return;Object.assign(na[String(mi+1)],pG(XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1})));});setActions(na);showToast('Excelを取り込みました ✓');e.target.value='';}catch(err){showToast('読み込みエラー: '+err.message);}};reader.readAsBinaryString(file);}
+
   if(loading)return <div className="splash"><div className="splash-logo">🗺️</div><div className="splash-text">FutureMap</div></div>;
   if(!user)return <AuthPage authMode={authMode} setAuthMode={setAuthMode} onSubmit={handleAuth}/>;
   return(
@@ -83,25 +154,14 @@ export default function App(){
           <div className="theme-picker" onClick={e=>e.stopPropagation()}>
             <div className="theme-picker-title">🎨 カラーテーマを選択</div>
             <div className="theme-grid">
-              {Object.entries(COLOR_THEMES).map(([key,t])=>(
-                <button key={key} className={`theme-btn${theme===key?' active':''}`} style={{background:t.bg,border:`3px solid ${theme===key?'#333':t.header}`}} onClick={()=>{setTheme(key);setShowThemePicker(false);saveAll(null,null,null,key);}}>
-                  <div className="theme-preview">{Object.values(t.colors).slice(0,5).map((c,i)=>(<div key={i} style={{background:c.bg,border:`1px solid ${c.border}`}}/>))}</div>
-                  <div className="theme-name" style={{color:t.headerText}}>{t.name}</div>
-                </button>
-              ))}
+              {Object.entries(COLOR_THEMES).map(([key,t])=>(<button key={key} className={`theme-btn${theme===key?' active':''}`} style={{background:t.bg,border:`3px solid ${theme===key?'#333':t.header}`}} onClick={()=>{setTheme(key);setShowThemePicker(false);saveAll(null,null,null,key);}}><div className="theme-preview">{Object.values(t.colors).slice(0,5).map((c,i)=>(<div key={i} style={{background:c.bg,border:`1px solid ${c.border}`}}/>))}</div><div className="theme-name" style={{color:t.headerText}}>{t.name}</div></button>))}
             </div>
           </div>
         </div>
       )}
       <header className="header" style={{background:T.header,borderBottom:`2px solid ${T.colors.yellow.border}`}}>
         <span className="logo" style={{color:T.headerText}}>🗺️ FutureMap</span>
-        <nav className="nav">
-          {['map','actions','profile'].map(p=>(
-            <button key={p} className={`nav-btn${page===p?' active':''}`} style={page===p?{background:T.colors.yellow.bg,color:T.headerText,borderColor:T.colors.yellow.border}:{color:T.headerText}} onClick={()=>setPage(p)}>
-              {p==='map'?'マップ':p==='actions'?'月次アクション':'プロフィール'}
-            </button>
-          ))}
-        </nav>
+        <nav className="nav">{['map','actions','profile'].map(p=>(<button key={p} className={`nav-btn${page===p?' active':''}`} style={page===p?{background:T.colors.yellow.bg,color:T.headerText,borderColor:T.colors.yellow.border}:{color:T.headerText}} onClick={()=>setPage(p)}>{p==='map'?'マップ':p==='actions'?'月次アクション':'プロフィール'}</button>))}</nav>
         <div className="header-right">
           <button className="btn-theme" style={{background:T.colors.purple.bg,color:T.colors.purple.label,borderColor:T.colors.purple.border}} onClick={()=>setShowThemePicker(true)}>🎨 テーマ</button>
           <span className="user-badge" style={{color:T.headerText}}>{profile.emoji} {profile.nickname||user.email}</span>
