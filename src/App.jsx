@@ -1,1 +1,30 @@
-import { useState, useEffect, useCallback } from 'react';import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';import { auth, db } from './firebase';import * as XLSX from 'xlsx';import './App.css';const CATEGORIES = [  { key: 'home',     label: '居住環境',        icon: '🏠', colorKey: 'yellow' },  { key: 'study',    label: '学び',            icon: '📚', colorKey: 'blue' },  { key: 'hobby',    label: '趣味・余暇・遊び',  icon: '🎯', colorKey: 'brightyellow' },  { key: 'family',   label: '家族・パートナー',  icon: '👨‍👩‍👧', colorKey: 'pink' },  { key: 'theme',    label: '人生のテーマ&感情', icon: '✨', colorKey: 'brightyellow', wide: true },  { key: 'health',   label: '健康',            icon: '💚', colorKey: 'yellow' },  { key: 'relation', label: '人間性・人間関係',  icon: '🤝', colorKey: 'purple' },  { key: 'work',     label: '仕事・社会貢献',   icon: '💼', colorKey: 'yellow' },  { key: 'money',    label: 'お金・物欲',       icon: '💴', colorKey: 'blue' },];const GRID_LAYOUT = [['home','study','hobby'],['family','theme','health'],['relation','work','money']];const HORIZONS = [  { key: 'y1',  label: '1年後',  sub: '2026年12月31日（58歳）', icon: '🌱' },  { key: 'y3',  label: '3年後',  sub: '2028年12月31日（60歳）', icon: '🌿' },  { key: 'y10', label: '10年後', sub: '2035年12月31日（67歳）', icon: '🌳' },];const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];const EMOJI_LIST = ['😊','🚀','🌸','⭐','🔥','💪','🎯','🌈','🦋','🌺','🎨','🏆','💡','🌙','🌊'];const MONTH_CATS = [  { key: 'home',     label: '居住環境',        icon: '🏠', colorKey: 'yellow' },  { key: 'study',    label: '学び',            icon: '📚', colorKey: 'blue' },  { key: 'hobby',    label: '趣味・余暇・遊び',  icon: '🎯', colorKey: 'brightyellow' },  { key: 'family',   label: '家族・パートナー',  icon: '👨‍👩‍👧', colorKey: 'pink' },  { key: 'theme',    label: '今月のテーマ&感情', icon: '✨', colorKey: 'brightyellow' },  { key: 'health',   label: '健康',            icon: '💚', colorKey: 'yellow' },  { key: 'relation', label: '人間性・人間関係',  icon: '🤝', colorKey: 'purple' },  { key: 'work',     label: '仕事・社会貢献',   icon: '💼', colorKey: 'yellow' },  { key: 'money',    label: 'お金・物欲',       icon: '💴', colorKey: 'blue' },
+import { useState, useEffect } from 'react';
+import { auth } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import LoginPage from './LoginPage';
+import FutureMapApp from './FutureMapApp';
+
+export default function App() {
+  const [user, setUser] = useState(undefined);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, u => setUser(u || null));
+  }, []);
+
+  if (user === undefined) {
+    return (
+      <div style={{
+        minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
+        background:'linear-gradient(135deg, #1a5035, #4caf78)',
+        fontFamily:"'Noto Sans JP',sans-serif",
+      }}>
+        <div style={{ textAlign:'center', color:'rgba(255,255,255,0.8)' }}>
+          <div style={{ fontSize:'40px', marginBottom:'12px' }}>map</div>
+          <p style={{ fontSize:'14px', letterSpacing:'0.1em' }}>起動中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return user ? <FutureMapApp user={user} /> : <LoginPage />;
+}
