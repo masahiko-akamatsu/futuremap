@@ -19,7 +19,7 @@ export default function App() {
         fontFamily:"'Noto Sans JP',sans-serif",
       }}>
         <div style={{ textAlign:'center', color:'rgba(255,255,255,0.8)' }}>
-          <div style={{ fontSize:'40px', marginBottom:'12px' }}>map</div>
+          <div style={{ fontSize:'40px', marginBottom:'12px' }}>🗺️</div>
           <p style={{ fontSize:'14px', letterSpacing:'0.1em' }}>起動中...</p>
         </div>
       </div>
