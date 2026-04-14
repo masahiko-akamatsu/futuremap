@@ -46,15 +46,15 @@ export default function FutureMapApp({user}){
         const ref = doc(db,'users',user.uid,'futuremap','data');
         const snap = await getDoc(ref);
         if(snap.exists()){
-          const content = snap.data().content;
-          let migrated = {...content};
-          if(content.month && !Object.keys(content).some(k=>k.startsWith('month_'))){
-            migrated[todayKey] = content.month; delete migrated.month;
-          }
-          setData(migrated); dataRef.current = migrated;
-          const mKeys = Object.keys(migrated).filter(k=>k.startsWith('month_')).sort();
+          const content=snap.data().content;
+          let migrated={...content};
+          if(content.month){if(!migrated[todayKey])migrated[todayKey]=content.month;delete migrated.month;}
+          Object.keys(migrated).forEach(k=>{const m=k.match(/^month_(\d{4}_\d{2})$/);if(m){if(!migrated[m[1]])migrated[m[1]]=migrated[k];delete migrated[k];}});
+          if(!migrated[todayKey])migrated[todayKey]={living:'',learning:'',leisure:'',family:'',theme:'',health:'',humanity:'',work:'',money:''};
+          setData(migrated);dataRef.current=migrated;
+          const mKeys=Object.keys(migrated).filter(k=>/^\d{4}_\d{2}$/.test(k)).sort();
           setMonthKeys(mKeys);
-          if(mKeys.length>0 && !mKeys.includes(todayKey)) setActiveMonthKey(mKeys[mKeys.length-1]);
+          if(mKeys.includes(todayKey)){setActiveMonthKey(todayKey);}else if(mKeys.length>0){setActiveMonthKey(mKeys[mKeys.length-1]);}
           if(snap.data().periods){
             const p={...DEFAULT_PERIODS,...snap.data().periods};
             setPeriods(p); periodsRef.current=p;
