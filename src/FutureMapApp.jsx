@@ -14,6 +14,7 @@ const DEFAULT_PERIODS={y1:'2026年12月31日',y3:'2028年12月31日',y10:'2035�
 export default function FutureMapApp({user}){
   const now = new Date();
   const todayKey = monthKey(now.getFullYear(), now.getMonth()+1);
+
   const [currentTab, setCurrentTab] = useState(0);
   const [data, setData] = useState(null);
   const [monthKeys, setMonthKeys] = useState([]);
@@ -30,14 +31,18 @@ export default function FutureMapApp({user}){
   const [periods, setPeriods] = useState({...DEFAULT_PERIODS});
   const [editingPeriod, setEditingPeriod] = useState(null);
   const [periodInput, setPeriodInput] = useState('');
+  const [showPeriodModal, setShowPeriodModal] = useState(false);
+
+  // useRefでstateへの参照を最新に保つ
   const dataRef = useRef(null);
   const periodsRef = useRef({...DEFAULT_PERIODS});
   const saveTimerRef = useRef(null);
   const periodInputRef = useRef(null);
   const savingRef = useRef(false);
 
-  useEffect(()=>{ dataRef.current = data; },[data]);
-  useEffect(()=>{ periodsRef.current = periods; },[periods]);
+  // dataとperiodsをrefにも同期
+  useEffect(()=>{ dataRef.current = data; }, [data]);
+  useEffect(()=>{ periodsRef.current = periods; }, [periods]);
 
   useEffect(()=>{
     const load = async ()=>{
@@ -46,125 +51,164 @@ export default function FutureMapApp({user}){
         const ref = doc(db,'users',user.uid,'futuremap','data');
         const snap = await getDoc(ref);
         if(snap.exists()){
-          const content=snap.data().content;
-          let migrated={...content};
-          if(content.month){if(!migrated[todayKey])migrated[todayKey]=content.month;delete migrated.month;}
-          Object.keys(migrated).forEach(k=>{const m=k.match(/^month_(\d{4}_\d{2})$/);if(m){if(!migrated[m[1]])migrated[m[1]]=migrated[k];delete migrated[k];}});
-          if(!migrated[todayKey])migrated[todayKey]={living:'',learning:'',leisure:'',family:'',theme:'',health:'',humanity:'',work:'',money:''};
-          setData(migrated);dataRef.current=migrated;
-          const mKeys=Object.keys(migrated).filter(k=>/^\d{4}_\d{2}$/.test(k)).sort();
+          const content = snap.data().content;
+          let migrated = {...content};
+          // 旧形式(month)→新形式(YYYY_MM)移行
+          if(content.month){
+            if(!migrated[todayKey]) migrated[todayKey] = content.month;
+            delete migrated.month;
+          }
+          // 旧形式(month_YYYY_MM)→新形式(YYYY_MM)移行
+          Object.keys(migrated).forEach(k=>{
+            const m = k.match(/^month_(\d{4}_\d{2})$/);
+            if(m){
+              if(!migrated[m[1]]) migrated[m[1]] = migrated[k];
+              delete migrated[k];
+            }
+          });
+          // 今月キーがなければ追加
+          if(!migrated[todayKey]) migrated[todayKey] = {...INITIAL_DATA.month};
+          setData(migrated);
+          dataRef.current = migrated;
+          const mKeys = Object.keys(migrated).filter(k=>/^\d{4}_\d{2}$/.test(k)).sort();
           setMonthKeys(mKeys);
-          if(mKeys.includes(todayKey)){setActiveMonthKey(todayKey);}else if(mKeys.length>0){setActiveMonthKey(mKeys[mKeys.length-1]);}
+          // 今月が存在する場合は今月を表示、なければ最新月
+          if(mKeys.includes(todayKey)){
+            setActiveMonthKey(todayKey);
+          } else if(mKeys.length>0){
+            setActiveMonthKey(mKeys[mKeys.length-1]);
+          }
           if(snap.data().periods){
-            const p={...DEFAULT_PERIODS,...snap.data().periods};
-            setPeriods(p); periodsRef.current=p;
+            const p = {...DEFAULT_PERIODS,...snap.data().periods};
+            setPeriods(p);
+            periodsRef.current = p;
           }
         } else {
-          const initData={...INITIAL_DATA,[todayKey]:INITIAL_DATA.month}; delete initData.month;
-          setData(initData); dataRef.current=initData; setMonthKeys([todayKey]);
+          const initData = {...INITIAL_DATA,[todayKey]:INITIAL_DATA.month};
+          delete initData.month;
+          setData(initData);
+          dataRef.current = initData;
+          setMonthKeys([todayKey]);
         }
       }catch(e){
         console.error(e);
-        const initData={...INITIAL_DATA,[todayKey]:INITIAL_DATA.month}; delete initData.month;
-        setData(initData); dataRef.current=initData; setMonthKeys([todayKey]);
+        const initData = {...INITIAL_DATA,[todayKey]:INITIAL_DATA.month};
+        delete initData.month;
+        setData(initData);
+        dataRef.current = initData;
+        setMonthKeys([todayKey]);
       }
       setLoading(false);
     };
     load();
   },[user.uid]);
 
-  const flushSave = async (newData, newPeriods)=>{
+  // 直接Firestoreに書き込む（refから最新値を取得）
+  const flushSave = async (newData, newPeriods) => {
     if(savingRef.current) return;
-    savingRef.current=true; setSaving(true);
+    savingRef.current = true;
+    setSaving(true);
     try{
       const ref = doc(db,'users',user.uid,'futuremap','data');
-      await setDoc(ref,{
+      const payload = {
         content: newData ?? dataRef.current,
         periods: newPeriods ?? periodsRef.current,
         updatedAt: serverTimestamp()
-      });
+      };
+      await setDoc(ref, payload, {merge: true});
       setLastSaved(new Date());
-      console.log('✅ Saved to Firestore');
-    }catch(e){ console.error('Save error:',e); }
-    savingRef.current=false; setSaving(false);
+      console.log('Saved to Firestore ✅');
+    }catch(e){
+      console.error('Firestore save error:', e);
+    }
+    savingRef.current = false;
+    setSaving(false);
   };
 
-  const scheduleSave=(newData,newPeriods)=>{
+  // デバウンス保存（1.5秒後に書き込み）
+  const scheduleSave = (newData, newPeriods) => {
     if(saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current=setTimeout(()=>flushSave(newData,newPeriods),1500);
+    saveTimerRef.current = setTimeout(()=>{
+      flushSave(newData, newPeriods);
+    }, 1500);
   };
 
-  const updateData=(tabId,key,value)=>{
+  const updateData = (tabId, key, value) => {
     setData(prev=>{
-      const next={...prev,[tabId]:{...prev[tabId],[key]:value}};
-      dataRef.current=next;
-      scheduleSave(next,null);
+      const next = {...prev, [tabId]:{...prev[tabId],[key]:value}};
+      dataRef.current = next;
+      scheduleSave(next, null);
       return next;
     });
   };
 
-  const startEditPeriod=(tabId)=>{
+  const startEditPeriod = (tabId)=>{
     setEditingPeriod(tabId);
-    setPeriodInput(periods[tabId]||DEFAULT_PERIODS[tabId]);
-    setTimeout(()=>periodInputRef.current?.focus(),50);
+    setPeriodInput(periodsRef.current[tabId]||DEFAULT_PERIODS[tabId]);
+    setShowPeriodModal(true);
   };
 
-  const savePeriod=()=>{
+  const savePeriod = ()=>{
     if(!editingPeriod) return;
-    const trimmed=periodInput.trim();
-    if(!trimmed){setEditingPeriod(null);return;}
-    const newP={...periods,[editingPeriod]:trimmed};
-    setPeriods(newP); periodsRef.current=newP;
+    const trimmed = periodInput.trim();
+    if(!trimmed){ setEditingPeriod(null); return; }
+    const newP = {...periodsRef.current,[editingPeriod]:trimmed};
+    setPeriods(newP);
+    periodsRef.current = newP;
     setEditingPeriod(null);
-    flushSave(dataRef.current,newP);
+    // デバウンスなしで即座に保存（periodsはユーザーが明示的に変更した値）
+    flushSave(dataRef.current, newP);
   };
 
-  const addMonth=(sourceKey)=>{
-    const nk=monthKey(newYear,newMonth);
-    if(monthKeys.includes(nk)){setActiveMonthKey(nk);setCurrentTab(0);setShowAddModal(false);return;}
-    const sd=sourceKey?{...(dataRef.current[sourceKey]||{})}:{};
+  const addMonth = (sourceKey)=>{
+    const nk = monthKey(newYear, newMonth);
+    if(monthKeys.includes(nk)){
+      setActiveMonthKey(nk); setCurrentTab(0); setShowAddModal(false); return;
+    }
+    const sd = sourceKey ? {...(dataRef.current[sourceKey]||{})} : {};
     setData(prev=>{
-      const next={...prev,[nk]:sd};
-      const newKeys=[...new Set([...monthKeys,nk])].sort();
-      setMonthKeys(newKeys); dataRef.current=next;
-      scheduleSave(next,null);
+      const next = {...prev,[nk]:sd};
+      const newKeys = [...new Set([...monthKeys,nk])].sort();
+      setMonthKeys(newKeys);
+      dataRef.current = next;
+      scheduleSave(next, null);
       return next;
     });
-    setActiveMonthKey(nk);setCurrentTab(0);setShowAddModal(false);
+    setActiveMonthKey(nk); setCurrentTab(0); setShowAddModal(false);
   };
 
-  const openModal=(key)=>{
-    const tabId=currentTab===0?activeMonthKey:TABS[currentTab].id;
+  const openModal = (key)=>{
+    const tabId = currentTab===0 ? activeMonthKey : TABS[currentTab].id;
     setEditingCard({key,tabId});
     setEditText((dataRef.current?.[tabId]?.[key])||'');
   };
 
-  const saveModal=()=>{
+  const saveModal = ()=>{
     if(!editingCard) return;
-    updateData(editingCard.tabId,editingCard.key,editText);
+    updateData(editingCard.tabId, editingCard.key, editText);
     setEditingCard(null);
   };
 
-  const handleExport=async()=>{
+  const handleExport = async ()=>{
     setExporting(true);
     try{
-      const exportData={...dataRef.current,month:dataRef.current[activeMonthKey]||{}};
-      await exportToExcel(exportData,user.displayName||user.email);
-    }catch(e){alert('エクスポートに失敗しました: '+e.message);}
+      const exportData = {...dataRef.current, month:dataRef.current[activeMonthKey]||{}};
+      await exportToExcel(exportData, user.displayName||user.email);
+    }catch(e){ alert('エクスポートに失敗しました: '+e.message); }
     setExporting(false);
   };
 
   if(loading) return <Loading/>;
 
-  const tab=TABS[currentTab];
-  const tabId=currentTab===0?activeMonthKey:tab.id;
-  const tabData=data?.[tabId]||{};
-  const isMonthTab=currentTab===0;
-  const {year:aY,month:aM}=parseMonthKey(activeMonthKey);
-  const isToday=activeMonthKey===todayKey;
-  const themeLabel=isMonthTab?(monthLabel(aY,aM)+'のテーマ&感情'):THEME_LABELS[tab.id];
-  const copyOpts=[...monthKeys].sort().reverse().slice(0,5);
-  const alreadyExists=monthKeys.includes(monthKey(newYear,newMonth));
+  const tab = TABS[currentTab];
+  const tabId = currentTab===0 ? activeMonthKey : tab.id;
+  const tabData = data?.[tabId]||{};
+  const isMonthTab = currentTab===0;
+  const {year:aY,month:aM} = parseMonthKey(activeMonthKey);
+  const isToday = activeMonthKey===todayKey;
+  const themeLabel = isMonthTab ? (monthLabel(aY,aM)+'のテーマ&感情') : THEME_LABELS[tab.id];
+  const copyOpts = [...monthKeys].sort().reverse().slice(0,5);
+  const alreadyExists = monthKeys.includes(monthKey(newYear,newMonth));
 
   return(
     <div style={{minHeight:'100vh',background:'#f4f8f5',fontFamily:"'Noto Sans JP',sans-serif"}}>
@@ -208,20 +252,15 @@ export default function FutureMapApp({user}){
             return(<button key={t.id} onClick={()=>setCurrentTab(i+1)}
               style={{padding:'9px 14px 11px',border:'none',borderRadius:'9px 9px 0 0',fontFamily:'inherit',fontSize:'13px',fontWeight:isActive?'700':'500',cursor:'pointer',whiteSpace:'nowrap',background:isActive?'#f4f8f5':'rgba(255,255,255,0.12)',color:isActive?GREEN[800]:'rgba(255,255,255,0.75)',display:'flex',alignItems:'center',gap:'6px'}}>
               {t.label}
-              {editingPeriod===t.id
-                ?<input ref={periodInputRef} value={periodInput} onChange={e=>setPeriodInput(e.target.value)} onBlur={savePeriod}
-                    onKeyDown={e=>{e.preventDefault();e.stopPropagation();if(e.key==='Enter')savePeriod();if(e.key==='Escape')setEditingPeriod(null);}}
-                    onClick={e=>e.stopPropagation()}
-                    style={{fontSize:'10px',padding:'2px 6px',borderRadius:'6px',border:'none',outline:'2px solid rgba(255,255,255,0.9)',background:'rgba(255,255,255,0.95)',color:GREEN[800],fontFamily:'inherit',width:'115px',fontWeight:'500'}}/>
-                :<span onClick={e=>{e.stopPropagation();startEditPeriod(t.id);}}
-                    style={{padding:'2px 7px',borderRadius:'10px',fontSize:'10px',background:isActive?'rgba(46,125,80,0.12)':'rgba(255,255,255,0.15)',color:isActive?GREEN[600]:'rgba(255,255,255,0.7)',cursor:'text',borderBottom:isActive?'1px dashed '+GREEN[400]:'1px dashed rgba(255,255,255,0.45)'}}>
+              <span onClick={e=>{e.stopPropagation();startEditPeriod(t.id);}}
+                    style={{padding:'2px 7px',borderRadius:'10px',fontSize:'10px',background:isActive?'rgba(46,125,80,0.12)':'rgba(255,255,255,0.15)',color:isActive?GREEN[600]:'rgba(255,255,255,0.7)',cursor:'pointer',borderBottom:isActive?'1px dashed '+GREEN[400]:'1px dashed rgba(255,255,255,0.45)'}}>
                     {period} ✎
                   </span>
-              }
             </button>);
           })}
         </div>
       </header>
+
       <main style={{padding:'20px 24px 40px'}}>
         <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'16px'}}>
           {isMonthTab?(
@@ -230,18 +269,14 @@ export default function FutureMapApp({user}){
           ):(
             <><span style={{fontSize:'13px',fontWeight:'600',color:GREEN[600],letterSpacing:'0.06em'}}>{tab.label}</span>
             <span style={{fontSize:'13px',color:'#aaa'}}>—</span>
-            {editingPeriod===tab.id
-              ?<input ref={periodInputRef} value={periodInput} onChange={e=>setPeriodInput(e.target.value)} onBlur={savePeriod}
-                  onKeyDown={e=>{e.preventDefault();e.stopPropagation();if(e.key==='Enter')savePeriod();if(e.key==='Escape')setEditingPeriod(null);}}
-                  style={{fontSize:'13px',padding:'2px 8px',borderRadius:'6px',border:'1px solid '+GREEN[400],outline:'none',fontFamily:'inherit',color:GREEN[800],width:'140px'}}/>
-              :<span onClick={()=>startEditPeriod(tab.id)}
-                  style={{fontSize:'13px',color:GREEN[600],cursor:'text',borderBottom:'1px dashed '+GREEN[400],paddingBottom:'1px'}}>
+            <span onClick={()=>startEditPeriod(tab.id)}
+                  style={{fontSize:'13px',color:GREEN[600],cursor:'pointer',borderBottom:'1px dashed '+GREEN[400],paddingBottom:'1px'}}>
                   {periods[tab.id]||DEFAULT_PERIODS[tab.id]} ✎
-                </span>
-            }</>
+                </span></>
           )}
           <div style={{flex:1,height:'1px',background:'linear-gradient(to right,rgba(46,125,80,0.25),transparent)'}}/>
         </div>
+
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'12px'}}>
           {CATEGORIES.map(cat=>{
             const label=cat.key==='theme'?themeLabel:cat.label;
@@ -266,6 +301,41 @@ export default function FutureMapApp({user}){
           })}
         </div>
       </main>
+
+      {/* ─── 期限日編集モーダル ─── */}
+      {showPeriodModal&&editingPeriod&&(
+        <div onClick={()=>setShowPeriodModal(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:300,display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:'18px',width:'100%',maxWidth:'380px',boxShadow:'0 20px 60px rgba(0,0,0,0.25)',overflow:'hidden'}}>
+            <div style={{padding:'16px 20px',background:'linear-gradient(135deg,'+GREEN[800]+','+GREEN[600]+')',display:'flex',alignItems:'center',gap:'10px'}}>
+              <span style={{fontSize:'20px'}}>📅</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:'15px',fontWeight:'700',color:'#fff'}}>
+                  {editingPeriod==='y1'?'1年後ビジョン':editingPeriod==='y3'?'3年後ビジョン':'10年後ビジョン'}の期限日
+                </div>
+                <div style={{fontSize:'11px',color:'rgba(255,255,255,0.7)',marginTop:'2px'}}>日付を入力してください</div>
+              </div>
+              <button onClick={()=>setShowPeriodModal(false)} style={{width:'28px',height:'28px',borderRadius:'50%',background:'rgba(255,255,255,0.15)',border:'none',color:'#fff',fontSize:'16px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+            </div>
+            <div style={{padding:'20px'}}>
+              <input
+                autoFocus
+                value={periodInput}
+                onChange={e=>setPeriodInput(e.target.value)}
+                placeholder="例：2027年3月31日"
+                style={{width:'100%',padding:'12px 14px',fontSize:'16px',border:'2px solid '+GREEN[400],borderRadius:'10px',outline:'none',fontFamily:'inherit',color:'#333',boxSizing:'border-box'}}
+                onFocus={e=>e.target.style.borderColor=GREEN[600]}
+                onBlur={e=>e.target.style.borderColor=GREEN[400]}
+              />
+              <p style={{fontSize:'11px',color:'#999',marginTop:'8px',margin:'8px 0 0'}}>例：2027年12月31日　または　2027/12/31</p>
+            </div>
+            <div style={{padding:'0 20px 20px',display:'flex',gap:'10px'}}>
+              <button onClick={()=>setShowPeriodModal(false)} style={{flex:1,padding:'11px',border:'1px solid #e0e0e0',background:'#fff',borderRadius:'10px',fontFamily:'inherit',fontSize:'14px',cursor:'pointer',color:'#666'}}>キャンセル</button>
+              <button onClick={()=>{savePeriod();setShowPeriodModal(false);}} style={{flex:2,padding:'11px',background:GREEN[600],border:'none',borderRadius:'10px',fontFamily:'inherit',fontSize:'14px',fontWeight:'700',cursor:'pointer',color:'#fff'}}>保存する</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddModal&&(
         <div onClick={()=>setShowAddModal(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
           <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:'18px',width:'100%',maxWidth:'440px',boxShadow:'0 20px 60px rgba(0,0,0,0.25)',overflow:'hidden'}}>
@@ -310,6 +380,7 @@ export default function FutureMapApp({user}){
           </div>
         </div>
       )}
+
       {editingCard&&(
         <div onClick={e=>{if(e.target===e.currentTarget)setEditingCard(null);}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
           <div style={{background:'#fff',borderRadius:'18px',width:'100%',maxWidth:'580px',boxShadow:'0 20px 60px rgba(0,0,0,0.25)',overflow:'hidden'}}>
@@ -337,6 +408,7 @@ export default function FutureMapApp({user}){
     </div>
   );
 }
+
 function Loading(){
   return(<div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#1a5035,#2e7d50)',fontFamily:"'Noto Sans JP',sans-serif",flexDirection:'column',gap:'16px'}}>
     <div style={{fontSize:'40px'}}>🗺️</div>
