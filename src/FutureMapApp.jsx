@@ -177,6 +177,25 @@ export default function FutureMapApp({user}){
     setActiveMonthKey(nk); setCurrentTab(0); setShowAddModal(false);
   };
 
+  const deleteMonth = (mk)=>{
+    if(monthKeys.length<=1){ alert('最後の月は削除できません。'); return; }
+    const {year:dy,month:dm}=parseMonthKey(mk);
+    if(!window.confirm(dy+'年'+dm+'月のデータを削除しますか?\nこの操作は元に戻せません。')) return;
+    setData(prev=>{
+      const next={...prev};
+      delete next[mk];
+      dataRef.current=next;
+      scheduleSave(next,null);
+      return next;
+    });
+    const newKeys=monthKeys.filter(k=>k!==mk);
+    setMonthKeys(newKeys);
+    if(activeMonthKey===mk){
+      setActiveMonthKey(newKeys.includes(todayKey)?todayKey:newKeys[newKeys.length-1]);
+      setCurrentTab(0);
+    }
+  };
+
   const openModal = (key)=>{
     const tabId = currentTab===0 ? activeMonthKey : TABS[currentTab].id;
     setEditingCard({key,tabId});
@@ -238,10 +257,20 @@ export default function FutureMapApp({user}){
           {monthKeys.map(mk=>{
             const{year:y,month:m}=parseMonthKey(mk);
             const isActive=currentTab===0&&activeMonthKey===mk;
-            return(<button key={mk} onClick={()=>{setCurrentTab(0);setActiveMonthKey(mk);}}
-              style={{padding:'8px 14px 10px',border:'none',borderRadius:'9px 9px 0 0',fontFamily:'inherit',fontSize:'12px',fontWeight:isActive?'700':'400',cursor:'pointer',whiteSpace:'nowrap',background:isActive?'#f4f8f5':'rgba(255,255,255,0.12)',color:isActive?GREEN[800]:'rgba(255,255,255,0.8)'}}>
-              {y}年{m}月{mk===todayKey&&<span style={{display:'inline-block',marginLeft:'3px',width:'5px',height:'5px',borderRadius:'50%',background:isActive?GREEN[400]:'rgba(255,255,255,0.9)',verticalAlign:'middle',marginBottom:'1px'}}/>}
-            </button>);
+            return(
+              <div key={mk} style={{position:'relative',display:'inline-flex'}}
+                onMouseEnter={e=>{const btn=e.currentTarget.querySelector('.del-btn');if(btn)btn.style.opacity='1';}}
+                onMouseLeave={e=>{const btn=e.currentTarget.querySelector('.del-btn');if(btn)btn.style.opacity='0';}}>
+                <button onClick={()=>{setCurrentTab(0);setActiveMonthKey(mk);}}
+                  style={{padding:'8px 14px 10px',paddingRight:monthKeys.length>1?'26px':'14px',border:'none',borderRadius:'9px 9px 0 0',fontFamily:'inherit',fontSize:'12px',fontWeight:isActive?'700':'400',cursor:'pointer',whiteSpace:'nowrap',background:isActive?'#f4f8f5':'rgba(255,255,255,0.12)',color:isActive?GREEN[800]:'rgba(255,255,255,0.8)'}}>
+                  {y}年{m}月{mk===todayKey&&<span style={{display:'inline-block',marginLeft:'3px',width:'5px',height:'5px',borderRadius:'50%',background:isActive?GREEN[400]:'rgba(255,255,255,0.9)',verticalAlign:'middle',marginBottom:'1px'}}/>}
+                </button>
+                {monthKeys.length>1&&(
+                  <button className="del-btn" onClick={e=>{e.stopPropagation();deleteMonth(mk);}}
+                    style={{position:'absolute',top:'5px',right:'4px',width:'15px',height:'15px',borderRadius:'50%',background:'rgba(220,60,60,0.9)',border:'none',color:'#fff',fontSize:'9px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:'0',transition:'opacity 0.15s',padding:0,fontWeight:'900',lineHeight:1}}>×</button>
+                )}
+              </div>
+            );
           })}
           <button onClick={()=>{setNewYear(now.getFullYear());setNewMonth(now.getMonth()+1);setShowAddModal(true);}}
             style={{padding:'7px 13px 9px',border:'1px dashed rgba(255,255,255,0.5)',borderBottom:'none',borderRadius:'9px 9px 0 0',fontFamily:'inherit',fontSize:'13px',fontWeight:'700',cursor:'pointer',background:'rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.9)',marginLeft:'2px'}}>＋</button>
