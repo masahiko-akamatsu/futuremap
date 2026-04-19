@@ -116,7 +116,7 @@ export default function FutureMapApp({user}){
     const newP={...periods,[editingPeriod]:trimmed};
     setPeriods(newP); periodsRef.current=newP;
     setEditingPeriod(null);
-    scheduleSave(null,newP);
+    flushSave(dataRef.current,newP);
   };
 
   const addMonth=(sourceKey)=>{
