@@ -156,7 +156,7 @@ export default function FutureMapApp({user}){
     setPeriods(newP);
     periodsRef.current = newP;
     setEditingPeriod(null);
-    // デバウンスなしで即座に保存（periodsはユーザーが明示的に変更した値）
+    setShowPeriodModal(false);
     flushSave(dataRef.current, newP);
   };
 
@@ -321,6 +321,7 @@ export default function FutureMapApp({user}){
                 autoFocus
                 value={periodInput}
                 onChange={e=>setPeriodInput(e.target.value)}
+                onKeyDown={e=>{if(e.isComposing)return;if(e.key==='Enter'){e.preventDefault();savePeriod();}if(e.key==='Escape'){e.preventDefault();setShowPeriodModal(false);}}}
                 placeholder="例：2027年3月31日"
                 style={{width:'100%',padding:'12px 14px',fontSize:'16px',border:'2px solid '+GREEN[400],borderRadius:'10px',outline:'none',fontFamily:'inherit',color:'#333',boxSizing:'border-box'}}
                 onFocus={e=>e.target.style.borderColor=GREEN[600]}
