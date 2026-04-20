@@ -115,7 +115,7 @@ export default function FutureMapApp({user}){
         periods: newPeriods ?? periodsRef.current,
         updatedAt: serverTimestamp()
       };
-      await setDoc(ref, payload, {merge: true});
+      await setDoc(ref, payload);
       setLastSaved(new Date());
       console.log('Saved to Firestore ✅');
     }catch(e){
