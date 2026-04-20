@@ -181,20 +181,19 @@ export default function FutureMapApp({user}){
     if(monthKeys.length<=1){ alert('最後の月は削除できません。'); return; }
     const {year:dy,month:dm}=parseMonthKey(mk);
     if(!window.confirm(dy+'年'+dm+'月のデータを削除しますか?\nこの操作は元に戻せません。')) return;
-    setData(prev=>{
-      const next={...prev};
-      delete next[mk];
-      dataRef.current=next;
-      scheduleSave(next,null);
-      return next;
-    });
+    const next={...dataRef.current};
+    delete next[mk];
+    dataRef.current=next;
+    setData({...next});
     const newKeys=monthKeys.filter(k=>k!==mk);
     setMonthKeys(newKeys);
     if(activeMonthKey===mk){
-      setActiveMonthKey(newKeys.includes(todayKey)?todayKey:newKeys[newKeys.length-1]);
+      const fallback=newKeys.includes(todayKey)?todayKey:newKeys[newKeys.length-1];
+      setActiveMonthKey(fallback);
       setCurrentTab(0);
     }
-  };
+    flushSave(next, null);
+  }
 
   const openModal = (key)=>{
     const tabId = currentTab===0 ? activeMonthKey : TABS[currentTab].id;
