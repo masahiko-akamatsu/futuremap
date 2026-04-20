@@ -192,6 +192,209 @@ export default function FutureMapApp({user}){
       setActiveMonthKey(fallback);
       setCurrentTab(0);
     }
+    // merge:trueなし で content を完全上書き（削除したキーをFirestoreから消すため）
+    (async()=>{
+      try{
+        const ref=doc(db,'users',user.uid,'futuremap','data');
+        await setDoc(ref,{content:next,periods:periodsRef.current,updatedAt:serverTimestamp()});
+        setLastSaved(new Date());
+        console.log('Deleted & saved ✅');
+      }catch(e){ console.error('delete save error:',e); }
+    })();
+  }rt { useState, useEffect, useRef } from 'react';
+import { auth, db } from './firebase';
+import { signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { CATEGORIES, TABS, INITIAL_DATA, THEME_LABELS } from './initialData';
+import { exportToExcel } from './excelExport';
+
+const GREEN = { 50:'#f0f9f4', 200:'#a8d5b8', 400:'#5aaa7a', 600:'#2e7d50', 800:'#1a5035' };
+function monthKey(y,m){return y+'_'+String(m).padStart(2,'0');}
+function monthLabel(y,m){return y+'年'+m+'月';}
+function parseMonthKey(k){const [y,m]=k.split('_');return{year:parseInt(y),month:parseInt(m)};}
+const DEFAULT_PERIODS={y1:'2026年12月31日',y3:'2028年12月31日',y10:'2035年12月31日'};
+
+export default function FutureMapApp({user}){
+  const now = new Date();
+  const todayKey = monthKey(now.getFullYear(), now.getMonth()+1);
+
+  const [currentTab, setCurrentTab] = useState(0);
+  const [data, setData] = useState(null);
+  const [monthKeys, setMonthKeys] = useState([]);
+  const [activeMonthKey, setActiveMonthKey] = useState(todayKey);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editingCard, setEditingCard] = useState(null);
+  const [editText, setEditText] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newYear, setNewYear] = useState(now.getFullYear());
+  const [newMonth, setNewMonth] = useState(now.getMonth()+1);
+  const [periods, setPeriods] = useState({...DEFAULT_PERIODS});
+  const [editingPeriod, setEditingPeriod] = useState(null);
+  const [periodInput, setPeriodInput] = useState('');
+  const [showPeriodModal, setShowPeriodModal] = useState(false);
+
+  // useRefでstateへの参照を最新に保つ
+  const dataRef = useRef(null);
+  const periodsRef = useRef({...DEFAULT_PERIODS});
+  const saveTimerRef = useRef(null);
+  const periodInputRef = useRef(null);
+  const savingRef = useRef(false);
+
+  // dataとperiodsをrefにも同期
+  useEffect(()=>{ dataRef.current = data; }, [data]);
+  useEffect(()=>{ periodsRef.current = periods; }, [periods]);
+
+  useEffect(()=>{
+    const load = async ()=>{
+      setLoading(true);
+      try{
+        const ref = doc(db,'users',user.uid,'futuremap','data');
+        const snap = await getDoc(ref);
+        if(snap.exists()){
+          const content = snap.data().content;
+          let migrated = {...content};
+          // 旧形式(month)→新形式(YYYY_MM)移行
+          if(content.month){
+            if(!migrated[todayKey]) migrated[todayKey] = content.month;
+            delete migrated.month;
+          }
+          // 旧形式(month_YYYY_MM)→新形式(YYYY_MM)移行
+          Object.keys(migrated).forEach(k=>{
+            const m = k.match(/^month_(\d{4}_\d{2})$/);
+            if(m){
+              if(!migrated[m[1]]) migrated[m[1]] = migrated[k];
+              delete migrated[k];
+            }
+          });
+          // 今月キーがなければ追加
+          if(!migrated[todayKey]) migrated[todayKey] = {...INITIAL_DATA.month};
+          setData(migrated);
+          dataRef.current = migrated;
+          const mKeys = Object.keys(migrated).filter(k=>/^\d{4}_\d{2}$/.test(k)).sort();
+          setMonthKeys(mKeys);
+          // 今月が存在する場合は今月を表示、なければ最新月
+          if(mKeys.includes(todayKey)){
+            setActiveMonthKey(todayKey);
+          } else if(mKeys.length>0){
+            setActiveMonthKey(mKeys[mKeys.length-1]);
+          }
+          if(snap.data().periods){
+            const p = {...DEFAULT_PERIODS,...snap.data().periods};
+            setPeriods(p);
+            periodsRef.current = p;
+          }
+        } else {
+          const initData = {...INITIAL_DATA,[todayKey]:INITIAL_DATA.month};
+          delete initData.month;
+          setData(initData);
+          dataRef.current = initData;
+          setMonthKeys([todayKey]);
+        }
+      }catch(e){
+        console.error(e);
+        const initData = {...INITIAL_DATA,[todayKey]:INITIAL_DATA.month};
+        delete initData.month;
+        setData(initData);
+        dataRef.current = initData;
+        setMonthKeys([todayKey]);
+      }
+      setLoading(false);
+    };
+    load();
+  },[user.uid]);
+
+  // 直接Firestoreに書き込む（refから最新値を取得）
+  const flushSave = async (newData, newPeriods) => {
+    if(savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try{
+      const ref = doc(db,'users',user.uid,'futuremap','data');
+      const payload = {
+        content: newData ?? dataRef.current,
+        periods: newPeriods ?? periodsRef.current,
+        updatedAt: serverTimestamp()
+      };
+      await setDoc(ref, payload, {merge: true});
+      setLastSaved(new Date());
+      console.log('Saved to Firestore ✅');
+    }catch(e){
+      console.error('Firestore save error:', e);
+    }
+    savingRef.current = false;
+    setSaving(false);
+  };
+
+  // デバウンス保存（1.5秒後に書き込み）
+  const scheduleSave = (newData, newPeriods) => {
+    if(saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(()=>{
+      flushSave(newData, newPeriods);
+    }, 1500);
+  };
+
+  const updateData = (tabId, key, value) => {
+    setData(prev=>{
+      const next = {...prev, [tabId]:{...prev[tabId],[key]:value}};
+      dataRef.current = next;
+      scheduleSave(next, null);
+      return next;
+    });
+  };
+
+  const startEditPeriod = (tabId)=>{
+    setEditingPeriod(tabId);
+    setPeriodInput(periodsRef.current[tabId]||DEFAULT_PERIODS[tabId]);
+    setShowPeriodModal(true);
+  };
+
+  const savePeriod = ()=>{
+    if(!editingPeriod) return;
+    const trimmed = periodInput.trim();
+    if(!trimmed){ setEditingPeriod(null); return; }
+    const newP = {...periodsRef.current,[editingPeriod]:trimmed};
+    setPeriods(newP);
+    periodsRef.current = newP;
+    setEditingPeriod(null);
+    setShowPeriodModal(false);
+    flushSave(dataRef.current, newP);
+  };
+
+  const addMonth = (sourceKey)=>{
+    const nk = monthKey(newYear, newMonth);
+    if(monthKeys.includes(nk)){
+      setActiveMonthKey(nk); setCurrentTab(0); setShowAddModal(false); return;
+    }
+    const sd = sourceKey ? {...(dataRef.current[sourceKey]||{})} : {};
+    setData(prev=>{
+      const next = {...prev,[nk]:sd};
+      const newKeys = [...new Set([...monthKeys,nk])].sort();
+      setMonthKeys(newKeys);
+      dataRef.current = next;
+      scheduleSave(next, null);
+      return next;
+    });
+    setActiveMonthKey(nk); setCurrentTab(0); setShowAddModal(false);
+  };
+
+  const deleteMonth = (mk)=>{
+    if(monthKeys.length<=1){ alert('最後の月は削除できません。'); return; }
+    const {year:dy,month:dm}=parseMonthKey(mk);
+    if(!window.confirm(dy+'年'+dm+'月のデータを削除しますか?\nこの操作は元に戻せません。')) return;
+    const next={...dataRef.current};
+    delete next[mk];
+    dataRef.current=next;
+    setData({...next});
+    const newKeys=monthKeys.filter(k=>k!==mk);
+    setMonthKeys(newKeys);
+    if(activeMonthKey===mk){
+      const fallback=newKeys.includes(todayKey)?todayKey:newKeys[newKeys.length-1];
+      setActiveMonthKey(fallback);
+      setCurrentTab(0);
+    }
     flushSave(next, null);
   }
 
