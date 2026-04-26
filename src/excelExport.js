@@ -1,46 +1,40 @@
 import ExcelJS from 'exceljs';
 import { CATEGORIES, TABS, THEME_LABELS } from './initialData';
 
-// Hex color to ARGB
-const toArgb = (hex) => hex && hex.length === 8 ? hex : (hex ? 'FF' + hex : null);
-
-// Cell fill helper
-const solidFill = (argb) => ({
-  type: 'pattern',
-  pattern: 'solid',
-  fgColor: { argb },
-});
-
-// Thin border all sides
+const solidFill = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
 const thinBorder = () => ({
-  top:    { style: 'thin' },
-  bottom: { style: 'thin' },
-  left:   { style: 'thin' },
-  right:  { style: 'thin' },
+  top: { style: 'thin' }, bottom: { style: 'thin' },
+  left: { style: 'thin' }, right: { style: 'thin' },
 });
 
-// Build one sheet matching original Excel format exactly
-function buildSheet(ws, tabId, tabData, userName) {
-  const tab = TABS.find(t => t.id === tabId);
-  const themeLabel = THEME_LABELS[tabId];
+// 原紙フォーマット完全再現
+// [headerRow, contentRow, col, key, hFill, hColor, hBold, cFill, cColor]
+const LAYOUT = [
+  [3, 4, 'B', 'living',   'FFFFFFCC', null,       false, 'FFFFFFCC', null      ],
+  [3, 4, 'C', 'learning', 'FFCCECFF', null,       false, 'FFFFFFCC', 'FF0000FF'],
+  [3, 4, 'D', 'leisure',  'FFFFFF00', 'FFFF0000', false, 'FFFFFF00', 'FFFF0000'],
+  [5, 6, 'B', 'family',   'FFFFFFCC', null,       true,  'FFFFFFCC', 'FFFF0000'],
+  [5, 6, 'C', 'theme',    'FFFFFF00', 'FF0000FF', true,  'FFFFFF00', 'FF0000CC'],
+  [5, 6, 'D', 'health',   'FFFFFFCC', null,       true,  'FFFFFFCC', null      ],
+  [7, 8, 'B', 'humanity', 'FFFFCCFF', null,       true,  'FFFFCCFF', null      ],
+  [7, 8, 'C', 'work',     'FFFFFFCC', null,       true,  'FFFFFFCC', null      ],
+  [7, 8, 'D', 'money',    'FFFFFFCC', null,       true,  'FFFFFFCC', null      ],
+];
 
-  // Page setup: A4 landscape, fit to 1 page
+function buildSheet(ws, tabId, tabData, sheetTitle) {
   ws.pageSetup = {
-    paperSize: 9,         // A4
-    orientation: 'landscape',
-    fitToPage: true,
-    fitToWidth: 1,
-    fitToHeight: 1,
+    paperSize: 9, orientation: 'landscape',
+    fitToPage: true, fitToWidth: 1, fitToHeight: 1,
     margins: { left: 0.25, right: 0.25, top: 0.25, bottom: 0.25, header: 0, footer: 0 },
   };
 
-  // Column widths (match original)
+  // 列幅（原紙：A=3.16, B=55.66, C=13.0, D=13.0）
   ws.getColumn('A').width = 3.16;
   ws.getColumn('B').width = 55.66;
-  ws.getColumn('C').width = 28;
-  ws.getColumn('D').width = 28;
+  ws.getColumn('C').width = 13.0;
+  ws.getColumn('D').width = 13.0;
 
-  // Row heights (match original)
+  // 行高さ（原紙通り）
   ws.getRow(1).height = 23;
   ws.getRow(2).height = 15.75;
   ws.getRow(3).height = 21.75;
@@ -50,51 +44,48 @@ function buildSheet(ws, tabId, tabData, userName) {
   ws.getRow(7).height = 24.75;
   ws.getRow(8).height = 193.5;
 
-  // Row 1: Title
+  // A1: タイトル（Arial 18 bold）
   const titleCell = ws.getCell('A1');
-  titleCell.value = tab.excelTitle;
+  titleCell.value = sheetTitle;
   titleCell.font = { bold: true, size: 18, name: 'Arial' };
 
-  // Row 2: Date (right column)
+  // D2: 日付
   const dateCell = ws.getCell('D2');
   dateCell.value = new Date();
   dateCell.numFmt = 'yyyy年m月d日';
   dateCell.font = { size: 12, name: 'Arial' };
 
-  // Username (B2)
-  if (userName) {
-    const nameCell = ws.getCell('B2');
-    nameCell.value = userName;
-    nameCell.font = { size: 12, name: 'Arial' };
-  }
+  const themeLabel = THEME_LABELS[tabId];
 
-  const layout = [
-    [3, 4, 'B', 'living'],
-    [3, 4, 'C', 'learning'],
-    [3, 4, 'D', 'leisure'],
-    [5, 6, 'B', 'family'],
-    [5, 6, 'C', 'theme'],
-    [5, 6, 'D', 'health'],
-    [7, 8, 'B', 'humanity'],
-    [7, 8, 'C', 'work'],
-    [7, 8, 'D', 'money'],
-  ];
-
-  layout.forEach(([hRow, cRow, col, key]) => {
+  LAYOUT.forEach(([hRow, cRow, col, key, hFill, hColor, hBold, cFill, cColor]) => {
     const cat = CATEGORIES.find(c => c.key === key);
-    const label = key === 'theme' ? themeLabel : cat.label;
+    const label = key === 'theme' ? themeLabel : (cat ? cat.label : key);
     const content = tabData[key] || '';
+
+    // ヘッダーセル（原紙のalignment: row3はcenter/center/wrap, row5,7はcenter/top）
     const hCell = ws.getCell(`${col}${hRow}`);
     hCell.value = label;
-    hCell.font = { bold: hRow >= 5, size: 18, name: 'HGSGothicE', color: cat.headerColor ? { argb: toArgb(cat.headerColor) } : { theme: 1 } };
-    hCell.fill = solidFill(toArgb(cat.headerBg));
-    hCell.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+    hCell.font = {
+      name: 'HGSGothicE', size: 18, bold: hBold,
+      color: hColor ? { argb: hColor } : { theme: 1 },
+    };
+    hCell.fill = solidFill(hFill);
+    hCell.alignment = {
+      horizontal: 'center',
+      vertical: hBold ? 'top' : 'center',
+      wrapText: !hBold,
+    };
     hCell.border = thinBorder();
+
+    // コンテンツセル（原紙: center/center/wrap）
     const cCell = ws.getCell(`${col}${cRow}`);
     cCell.value = content;
-    cCell.font = { size: 18, name: 'HGSGothicE', color: cat.contentColor ? { argb: toArgb(cat.contentColor) } : { theme: 1 } };
-    cCell.fill = solidFill(toArgb(cat.contentBg));
-    cCell.alignment = { horizontal: col === 'B' && (cRow === 6 || cRow === 8) ? 'left' : 'center', vertical: 'center', wrapText: true };
+    cCell.font = {
+      name: 'HGSGothicE', size: 18,
+      color: cColor ? { argb: cColor } : { theme: 1 },
+    };
+    cCell.fill = solidFill(cFill);
+    cCell.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
     cCell.border = thinBorder();
   });
 }
@@ -103,18 +94,49 @@ export async function exportToExcel(allData, userName = '') {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'FutureMap';
   wb.created = new Date();
-  const sheetOrder = ['month', 'y10', 'y3', 'y1'];
-  const sheetNames = { month: '４月アクション', y1: 'フューチャーマップ(1年後2026年の外側)', y3: 'フューチャーマップ(3年後2028年の外側)', y10: 'フューチャーマップ(Life Goals10years)' };
-  sheetOrder.forEach(tabId => {
-    const ws = wb.addWorksheet(sheetNames[tabId]);
-    buildSheet(ws, tabId, allData[tabId] || {}, userName);
+
+  // allData: { month: {...}, y1: {...}, y3: {...}, y10: {...} }
+  // monthはFutureMapApp.jsxで現在の月のデータを 'month' キーで渡す
+  const now = new Date();
+  const ym = `${now.getFullYear()}年${now.getMonth()+1}月`;
+
+  const sheets = [
+    {
+      tabId: 'month',
+      name: `${now.getFullYear()}年${now.getMonth()+1}月アクション`,
+      title: `フューチャーマップ(今月のアクション)【${ym}】`,
+    },
+    {
+      tabId: 'y1',
+      name: 'フューチャーマップ(1年後2026年の外側) ',
+      title: 'フューチャーマップ(2026年の外側)　【1年後】',
+    },
+    {
+      tabId: 'y3',
+      name: 'フューチャーマップ(3年後2028年の外側)',
+      title: 'フューチャーマップ(2028年の外側)　【3年後】',
+    },
+    {
+      tabId: 'y10',
+      name: 'フューチャーマップ(Life Goals10years)',
+      title: 'フューチャーマップ(Life Goals/10years)現状の外側',
+    },
+  ];
+
+  sheets.forEach(({ tabId, name, title }) => {
+    const ws = wb.addWorksheet(name);
+    buildSheet(ws, tabId, allData[tabId] || {}, title);
   });
+
   const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `FutureMap_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const dt = now.toISOString().slice(0, 10).replace(/-/g, '');
+  a.download = `FutureMap${dt}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }
