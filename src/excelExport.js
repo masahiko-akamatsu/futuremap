@@ -30,9 +30,9 @@ function buildSheet(ws, tabId, tabData, sheetTitle) {
 
   // 列幅（原紙：A=3.16, B=55.66, C=13.0, D=13.0）
   ws.getColumn('A').width = 3.16;
-  ws.getColumn('B').width = 55.66;
-  ws.getColumn('C').width = 13.0;
-  ws.getColumn('D').width = 13.0;
+  ws.getColumn('B').width = 60;
+  ws.getColumn('C').width = 60;
+  ws.getColumn('D').width = 60;
 
   // 行高さ（原紙通り）
   ws.getRow(1).height = 23;
