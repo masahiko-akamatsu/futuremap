@@ -105,7 +105,11 @@ export async function exportToExcel(allData, userName = '') {
     console.log("EXPORT_KEYS:", JSON.stringify(Object.keys(allData)));
   console.log("MONTH_KEYS:", JSON.stringify(Object.keys(allData.month||{})));
   console.log("Y1_KEYS:", JSON.stringify(Object.keys(allData.y1||{})));
-  console.log("MONTH_LIVING:", JSON.stringify((allData.month||{}).living));
+  
+  const mth=allData.month||{};
+  const mkeys=Object.keys(mth);
+  if(mkeys.length>0) console.log("MONTH_FIRST_ENTRY:", JSON.stringify({key:mkeys[0],val:(mth[mkeys[0]]||'').toString().slice(0,50)}));
+  
   const wb = new ExcelJS.Workbook();
   wb.creator = 'FutureMap';
   wb.created = new Date();
