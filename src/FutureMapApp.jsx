@@ -229,8 +229,8 @@ export default function FutureMapApp({user}){
   const handleExport = async ()=>{
     setExporting(true);
     try{
-      const exportData = {...dataRef.current, month:dataRef.current[activeMonthKey]||{}};
-      await exportToExcel(exportData, user.displayName||user.email);
+      const exportData = {...dataRef.current};
+      await exportToExcel(exportData, user.displayName||user.email, monthKeys);
     }catch(e){ alert('エクスポートに失敗しました: '+e.message); }
     setExporting(false);
   };
