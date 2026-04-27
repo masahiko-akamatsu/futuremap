@@ -69,13 +69,12 @@ export default function FutureMapApp({user}){
           // 今月キーがなければ追加
           if(!migrated[todayKey]) migrated[todayKey] = {...INITIAL_DATA.month};
           
-  // 2026_04が空ならactionsバックアップから復元
+  // 2026_04が空ならusers/UIDのactionsバックアップから復元
   if(!migrated['2026_04'] || Object.values(migrated['2026_04']).every(v=>!v)){
-    const snap2=await getDoc(doc(db,'users',user.uid,'futuremap','data'));
-    const raw=snap2.data();
-    if(raw&&raw.actions){
-      // actionsの中でデータがある最初のエントリを使う
-      const acts=raw.actions;
+    const userSnap=await getDoc(doc(db,'users',user.uid));
+    const userData=userSnap.data();
+    if(userData&&userData.actions){
+      const acts=userData.actions;
       const filled=Object.entries(acts).find(([,v])=>v&&(v.home||v.study||v.family));
       if(filled){
         const old=filled[1];
@@ -84,6 +83,7 @@ export default function FutureMapApp({user}){
           family: old.family||'', theme: old.theme||'', health: old.health||'',
           humanity: old.relation||'', work: old.work||'', money: old.money||''
         };
+        console.log('Restored 2026_04 from actions backup');
       }
     }
   }
