@@ -1,5 +1,17 @@
 import ExcelJS from 'exceljs';
-import { CATEGORIES, TABS, THEME_LABELS } from './initialData';
+import { THEME_LABELS } from './initialData';
+const LABELS = {
+  living:   '居住環境',
+  learning: '学び',
+  leisure:  '趣味・余暇・遙び',
+  family:   '家族・パートナー',
+  theme:    null,
+  health:   '健康',
+  humanity: '人間性・人間関係',
+  work:     '仕事・社会貢献',
+  money:    'お金・物欲',
+};
+
 
 const solidFill = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
 const thinBorder = () => ({
@@ -58,8 +70,7 @@ function buildSheet(ws, tabId, tabData, sheetTitle) {
   const themeLabel = THEME_LABELS[tabId];
 
   LAYOUT.forEach(([hRow, cRow, col, key, hFill, hColor, hBold, cFill, cColor]) => {
-    const cat = CATEGORIES.find(c => c.key === key);
-    const label = key === 'theme' ? themeLabel : (cat ? cat.label : key);
+    const label = key === 'theme' ? themeLabel : (LABELS[key] || key);
     const content = tabData[key] || '';
 
     // ヘッダーセル（原紙のalignment: row3はcenter/center/wrap, row5,7はcenter/top）
