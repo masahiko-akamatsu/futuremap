@@ -68,7 +68,7 @@ export default function FutureMapApp({user}){
           });
           // 今月キーがなければ追加
           if(!migrated[todayKey]) migrated[todayKey] = {...INITIAL_DATA.month};
-          setData(migrated);
+          console.log("LOADED_2026_04:", JSON.stringify(Object.keys(migrated["2026_04"]||{}))); console.log("LOADED_2026_04_LIVING:", (migrated["2026_04"]||{}).living); setData(migrated);
           dataRef.current = migrated;
           const mKeys = Object.keys(migrated).filter(k=>/^\d{4}_\d{2}$/.test(k)).sort();
           setMonthKeys(mKeys);
