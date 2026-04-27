@@ -91,6 +91,7 @@ function buildSheet(ws, tabId, tabData, sheetTitle) {
 }
 
 export async function exportToExcel(allData, userName = '') {
+    console.log("EXPORT_KEYS:", JSON.stringify(Object.keys(allData)));
   const wb = new ExcelJS.Workbook();
   wb.creator = 'FutureMap';
   wb.created = new Date();
