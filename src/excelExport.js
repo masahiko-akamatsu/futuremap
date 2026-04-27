@@ -72,8 +72,8 @@ function buildSheet(ws, tabId, tabData, sheetTitle) {
     hCell.fill = solidFill(hFill);
     hCell.alignment = {
       horizontal: 'center',
-      vertical: hBold ? 'top' : 'center',
-      wrapText: !hBold,
+      vertical: 'center',
+      wrapText: true,
     };
     hCell.border = thinBorder();
 
