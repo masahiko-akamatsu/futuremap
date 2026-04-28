@@ -83,7 +83,6 @@ export default function FutureMapApp({user}){
           family: old.family||'', theme: old.theme||'', health: old.health||'',
           humanity: old.relation||'', work: old.work||'', money: old.money||''
         };
-        console.log('Restored 2026_04 from actions backup');
       }
     }
   }
@@ -136,7 +135,6 @@ export default function FutureMapApp({user}){
       };
       await setDoc(ref, payload);
       setLastSaved(new Date());
-      console.log('Saved to Firestore ✅');
     }catch(e){
       console.error('Firestore save error:', e);
     }
